@@ -1,0 +1,75 @@
+name: Security & Identity Foundation CI
+
+on:
+  push:
+    branches: [ main, develop, 'feature/*', 'copilot/*' ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  security-foundation:
+    name: Security Foundation Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: |
+          cd apps/backend
+          npm ci
+
+      - name: Generate test keys
+        run: |
+          mkdir -p tests/fixtures/keys
+          openssl genrsa -out tests/fixtures/keys/test-private.pem 2048
+          openssl rsa -in tests/fixtures/keys/test-private.pem -pubout -out tests/fixtures/keys/test-public.pem
+
+      - name: Run security foundation tests
+        env:
+          NODE_ENV: test
+          JWT_ISSUER: test-issuer
+          JWT_AUDIENCE: test-audience
+          JWT_ALG: HS256
+          JWT_SECRET: test-secret-at-least-32-characters-long-for-security-testing
+          JWT_REFRESH_SECRET: test-refresh-secret-at-least-32-characters-long-for-security-testing
+          HTTP_PORT: 3001
+          LOG_LEVEL: warn
+        run: |
+          cd apps/backend
+          npx jest tests/config.test.js tests/security.test.js tests/middleware.test.js --verbose
+
+      - name: Test JWT generation script
+        env:
+          NODE_ENV: test
+          JWT_ISSUER: test-issuer
+          JWT_AUDIENCE: test-audience
+          JWT_ALG: HS256
+          JWT_SECRET: test-secret-at-least-32-characters-long-for-security-testing
+          JWT_REFRESH_SECRET: test-refresh-secret-at-least-32-characters-long-for-security-testing
+          HTTP_PORT: 3001
+        run: |
+          node scripts/generate-test-jwt.js > /dev/null
+          echo "✅ JWT generation script works"
+
+      - name: Validate documentation
+        run: |
+          echo "✅ Validating security documentation and examples"
+          test -f .env.example
+          test -f ARCHITECTURE.md
+          grep -q "Security & Identity Foundation" ARCHITECTURE.md
+          echo "  Documentation validation passed"

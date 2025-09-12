@@ -1,0 +1,6 @@
+# Ignore unnecessary files in Docker build
+node_modules
+.next
+.git
+**/.DS_Store
+**/pages

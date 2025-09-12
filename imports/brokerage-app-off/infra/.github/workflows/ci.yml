@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: brokerage
+        ports:
+          - 5432:5432
+        options: >
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:password@localhost:5432/brokerage
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies (web)
+        run: |
+          cd web
+          npm install
+      - name: Install dependencies (backend)
+        run: |
+          cd backend
+          npm install
+      - name: Run backend tests
+        run: |
+          cd backend
+          npm test
+      - name: Run web tests
+        run: |
+          cd web
+          npm test
+      # Add mobile build/test steps as needed
+      # - name: Install dependencies (mobile)
+      #   run: |
+      #     cd mobile
+      #     npm install
+      # - name: Run mobile tests
+      #   run: |
+      #     cd mobile
+      #     npm test

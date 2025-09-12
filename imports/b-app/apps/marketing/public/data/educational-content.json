@@ -1,0 +1,80 @@
+{
+  "investmentGuide": {
+    "chapters": [
+      {
+        "id": 1,
+        "title": "Investment Basics",
+        "description": "Understanding stocks, bonds, and mutual funds",
+        "duration": "45 minutes",
+        "difficulty": "Beginner",
+        "completed": false
+      },
+      {
+        "id": 2,
+        "title": "Pakistani Stock Market",
+        "description": "Learn about PSX, KSE-100, and local regulations",
+        "duration": "60 minutes",
+        "difficulty": "Beginner",
+        "completed": false
+      },
+      {
+        "id": 3,
+        "title": "Risk Management",
+        "description": "Portfolio diversification and risk assessment",
+        "duration": "75 minutes",
+        "difficulty": "Intermediate",
+        "completed": false
+      },
+      {
+        "id": 4,
+        "title": "Islamic Finance",
+        "description": "Shariah-compliant investing principles",
+        "duration": "50 minutes",
+        "difficulty": "Intermediate",
+        "completed": false
+      },
+      {
+        "id": 5,
+        "title": "Advanced Strategies",
+        "description": "Options, derivatives, and sophisticated techniques",
+        "duration": "90 minutes",
+        "difficulty": "Advanced",
+        "completed": false
+      }
+    ]
+  },
+  "glossary": [
+    {
+      "term": "KSE-100",
+      "definition": "Pakistan's benchmark stock market index tracking top 100 companies",
+      "urdu": "پاکستان کا بنچ مارک اسٹاک مارکیٹ انڈیکس جو ٹاپ 100 کمپنیوں کو ٹریک کرتا ہے"
+    },
+    {
+      "term": "Mutual Fund",
+      "definition": "Investment vehicle pooling money from many investors to purchase securities",
+      "urdu": "سرمایہ کاری کا ذریعہ جو کئی سرمایہ کاروں کے پیسے جمع کرکے سیکیورٹیز خریدتا ہے"
+    },
+    {
+      "term": "Dividend",
+      "definition": "Payment made by companies to shareholders from profits",
+      "urdu": "کمپنیوں کی جانب سے منافع سے شیئر ہولڈرز کو کی جانے والی ادائیگی"
+    }
+  ],
+  "faqs": [
+    {
+      "question": "What is the minimum amount needed to start investing?",
+      "answer": "You can start investing with as little as PKR 1,000. Our platform supports small investments to help beginners get started.",
+      "category": "Getting Started"
+    },
+    {
+      "question": "Is InvestPro Shariah-compliant?",
+      "answer": "Yes, we offer a complete range of Shariah-compliant investment options reviewed by our Islamic finance advisory board.",
+      "category": "Islamic Finance"
+    },
+    {
+      "question": "How does the AI recommendation system work?",
+      "answer": "Our AI analyzes market data, company fundamentals, and your risk profile to provide personalized investment recommendations.",
+      "category": "Technology"
+    }
+  ]
+}
