@@ -1,12 +1,21 @@
 {
   "name": "brokerage",
   "private": true,
-  "packageManager": "pnpm@9",
-  "workspaces": ["apps/*", "packages/*"],
+  "packageManager": "pnpm@10.16.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test"
+  },
+  "devDependencies": {
+    "next": "^15.5.3",
+    "ts-node": "^10.9.2",
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.2"
   }
 }

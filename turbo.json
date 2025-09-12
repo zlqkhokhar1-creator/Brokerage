@@ -1,8 +1,27 @@
 {
-  "pipeline": {
-    "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".next/**"] },
-    "dev": { "cache": false },
-    "lint": {},
-    "test": {}
-  }
+  "$schema": "https://turborepo.org/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "cache": true
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": ["coverage/**"],
+      "inputs": ["src/**/*.tsx", "src/**/*.ts", "test/**/*.ts", "test/**/*.tsx"]
+    }
+  },
+  "globalDependencies": [
+    "**/.env*",
+    "tsconfig.json",
+    "turbo.json"
+  ]
 }
