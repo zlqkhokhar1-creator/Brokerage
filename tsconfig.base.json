@@ -6,9 +6,12 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@ui/*": ["packages/ui/*"],
-      "@types/*": ["packages/types/*"],
-      "@utils/*": ["packages/utils/*"]
+      "@ui": ["packages/ui/src/index.ts"],
+      "@ui/*": ["packages/ui/src/*"],
+      "@utils": ["packages/utils/src/index.ts"],
+      "@utils/*": ["packages/utils/src/*"],
+      "@types": ["packages/types/src/index.ts"],
+      "@types/*": ["packages/types/src/*"]
     }
   }
 }
