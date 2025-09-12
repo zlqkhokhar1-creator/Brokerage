@@ -1,0 +1,122 @@
+{
+  "name": "payment-stripe-contracts",
+  "version": "0.1.0",
+  "generatedAt": "2025-09-12T03:09:42.078Z",
+  "commands": {
+    "AuthorizePayment": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "paymentMethodId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "userId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "amount",
+          "currency",
+          "paymentMethodId",
+          "userId"
+        ]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "authorized",
+              "failed",
+              "pending"
+            ]
+          },
+          "amount": {
+            "type": "integer"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "stripePaymentIntentId": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "paymentId",
+          "status",
+          "amount",
+          "currency",
+          "createdAt"
+        ]
+      }
+    }
+  },
+  "events": {
+    "payment.authorized.v1": {
+      "type": "object",
+      "properties": {
+        "paymentId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "integer"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "paymentMethodId": {
+          "type": "string"
+        },
+        "stripePaymentIntentId": {
+          "type": "string"
+        },
+        "authorizedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "metadata": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "paymentId",
+        "userId",
+        "amount",
+        "currency",
+        "paymentMethodId",
+        "authorizedAt"
+      ]
+    }
+  }
+}

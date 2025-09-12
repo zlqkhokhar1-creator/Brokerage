@@ -1,0 +1,72 @@
+{
+  "realtime": {
+    "kse100": {
+      "value": "50,247",
+      "change": "+2.3%",
+      "changeType": "positive"
+    },
+    "usdPkr": {
+      "value": "278.50",
+      "change": "+0.12",
+      "changeType": "positive"
+    },
+    "inflation": {
+      "value": "8.2%",
+      "change": "-0.3%",
+      "changeType": "negative"
+    },
+    "goldRate": {
+      "value": "₨215,400/tola",
+      "change": "+1.2%",
+      "changeType": "positive"
+    }
+  },
+  "topStocks": [
+    {
+      "symbol": "TRG",
+      "name": "TRG Pakistan Ltd",
+      "price": "PKR 156.50",
+      "change": "+12.4%",
+      "volume": "2.3M",
+      "aiScore": 8.7
+    },
+    {
+      "symbol": "HBL",
+      "name": "Habib Bank Limited",
+      "price": "PKR 89.25",
+      "change": "+8.9%",
+      "volume": "5.1M",
+      "aiScore": 7.9
+    },
+    {
+      "symbol": "LUCKY",
+      "name": "Lucky Cement",
+      "price": "PKR 542.00",
+      "change": "+6.7%",
+      "volume": "1.8M",
+      "aiScore": 8.2
+    }
+  ],
+  "mutualFunds": [
+    {
+      "name": "JS Growth Fund",
+      "nav": "PKR 45.67",
+      "ytdReturn": "18.5%",
+      "category": "Equity",
+      "riskLevel": "High"
+    },
+    {
+      "name": "Al Habib Islamic Fund",
+      "nav": "PKR 52.34",
+      "ytdReturn": "15.2%",
+      "category": "Islamic Equity",
+      "riskLevel": "Medium-High"
+    }
+  ],
+  "marketStats": {
+    "totalMarketCap": "PKR 7.8T",
+    "dailyVolume": "PKR 12.5B",
+    "listedCompanies": "534",
+    "activeInvestors": "180K+"
+  }
+}
