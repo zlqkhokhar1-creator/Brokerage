@@ -1,0 +1,17 @@
+{
+  "name": "@b-app/platform-ai-utils",
+  "version": "1.0.0",
+  "description": "Cross-block AI orchestration utilities",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "uuid": "^9.0.0",
+    "joi": "^17.11.0"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0"
+  }
+}

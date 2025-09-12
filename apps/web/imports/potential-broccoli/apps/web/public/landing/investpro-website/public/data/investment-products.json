@@ -1,0 +1,59 @@
+{
+  "stocks": {
+    "categories": [
+      {
+        "name": "Blue Chip Stocks",
+        "description": "Large-cap companies with stable earnings",
+        "examples": ["HBL", "LUCKY", "ENGRO"],
+        "avgReturn": "12-15%",
+        "riskLevel": "Low-Medium"
+      },
+      {
+        "name": "Growth Stocks",
+        "description": "High-growth potential companies",
+        "examples": ["TRG", "SYSTEMS", "NETSOL"],
+        "avgReturn": "18-25%",
+        "riskLevel": "High"
+      }
+    ],
+    "sectors": [
+      {
+        "name": "Technology",
+        "performance": "+15.2%",
+        "companies": 25
+      },
+      {
+        "name": "Banking",
+        "performance": "+8.7%",
+        "companies": 18
+      }
+    ]
+  },
+  "mutualFunds": {
+    "categories": [
+      {
+        "name": "Equity Funds",
+        "description": "Invest in Pakistani stocks",
+        "avgReturn": "15-20%",
+        "riskLevel": "Medium-High",
+        "minInvestment": "PKR 500"
+      },
+      {
+        "name": "Islamic Funds",
+        "description": "Shariah-compliant investments",
+        "avgReturn": "12-18%",
+        "riskLevel": "Medium",
+        "minInvestment": "PKR 500"
+      }
+    ]
+  },
+  "etfs": [
+    {
+      "name": "KSE-100 Index Fund",
+      "ticker": "KSE100",
+      "expenseRatio": "0.75%",
+      "ytdReturn": "14.2%",
+      "description": "Track the top 100 companies on PSX"
+    }
+  ]
+}
