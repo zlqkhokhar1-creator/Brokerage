@@ -1,0 +1,92 @@
+{
+  "plans": [
+    {
+      "id": "starter",
+      "name": "Starter",
+      "price": 0,
+      "currency": "PKR",
+      "period": "month",
+      "description": "Perfect for beginners starting their investment journey",
+      "popular": false,
+      "features": [
+        "Basic portfolio tracking",
+        "Educational content access",
+        "Standard market data",
+        "Email support",
+        "Mobile app access",
+        "Basic research reports"
+      ],
+      "limitations": [
+        "Limited to 5 stocks",
+        "Basic analytics only",
+        "Standard execution speed"
+      ],
+      "cta": "Start Free"
+    },
+    {
+      "id": "professional",
+      "name": "Professional",
+      "price": 999,
+      "currency": "PKR",
+      "period": "month",
+      "description": "Advanced tools for serious investors",
+      "popular": true,
+      "features": [
+        "AI-powered analytics",
+        "Unlimited portfolio tracking",
+        "Real-time market data",
+        "Advanced charting tools",
+        "Priority customer support",
+        "Robo-advisor access",
+        "Tax optimization reports",
+        "Risk assessment tools"
+      ],
+      "limitations": [],
+      "cta": "Start 30-Day Trial",
+      "savings": "Save PKR 2,000 annually"
+    },
+    {
+      "id": "enterprise",
+      "name": "Enterprise",
+      "price": 2499,
+      "currency": "PKR",
+      "period": "month",
+      "description": "Complete investment solution for wealth management",
+      "popular": false,
+      "features": [
+        "Everything in Professional",
+        "Dedicated relationship manager",
+        "Custom portfolio strategies",
+        "Priority trade execution",
+        "Advanced API access",
+        "Institutional research",
+        "White-glove onboarding",
+        "24/7 phone support"
+      ],
+      "limitations": [],
+      "cta": "Contact Sales",
+      "minInvestment": "PKR 500,000"
+    }
+  ],
+  "features": {
+    "trading": [
+      {
+        "name": "Commission-Free Trading",
+        "description": "Zero brokerage on equity trades",
+        "plans": ["professional", "enterprise"]
+      },
+      {
+        "name": "Real-Time Market Data",
+        "description": "Live quotes and market depth",
+        "plans": ["professional", "enterprise"]
+      }
+    ],
+    "analytics": [
+      {
+        "name": "AI-Powered Insights",
+        "description": "Machine learning stock analysis",
+        "plans": ["professional", "enterprise"]
+      }
+    ]
+  }
+}

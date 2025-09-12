@@ -1,0 +1,20 @@
+{
+  "name": "@b-app/block-test-example",
+  "version": "0.1.0",
+  "description": "test-example block for B-App platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@b-app/platform-core": "0.1.0",
+    "@b-app/platform-block-api": "0.1.0",
+    "@b-app/platform-serialization": "0.1.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

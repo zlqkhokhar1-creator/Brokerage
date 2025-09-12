@@ -1,0 +1,9 @@
+[build]
+  base = "apps/web"
+  command = "npm ci && npm run build"
+  publish = ".next"
+
+[[redirects]]
+  from = "/*"
+  to = "/"
+  status = 200
