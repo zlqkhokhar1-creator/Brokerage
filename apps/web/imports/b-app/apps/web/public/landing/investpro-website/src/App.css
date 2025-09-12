@@ -1,0 +1,104 @@
+/* Custom CSS for InvestPro */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #1A1F36;
+  background-color: #FFFFFF;
+}
+
+.font-heading {
+  font-family: 'Manrope', system-ui, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F6F9FC;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #E6EBF1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00D09C;
+}
+
+/* Smooth animations */
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+/* Custom focus styles */
+.focus-ring:focus-visible {
+  outline: 2px solid #00D09C;
+  outline-offset: 2px;
+}
+
+/* Gradient backgrounds */
+.gradient-primary {
+  background: linear-gradient(135deg, #0A2540 0%, #1A365D 100%);
+}
+
+.gradient-secondary {
+  background: linear-gradient(135deg, #00D09C 0%, #16FFB9 100%);
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(10, 37, 64, 0.1), 0 10px 10px -5px rgba(10, 37, 64, 0.04);
+}
+
+/* Button styles */
+.btn-primary {
+  background: #00D09C;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #16FFB9;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0, 208, 156, 0.3);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #0A2540;
+  border: 1px solid #E6EBF1;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  border-color: #0A2540;
+  background: #F6F9FC;
+}

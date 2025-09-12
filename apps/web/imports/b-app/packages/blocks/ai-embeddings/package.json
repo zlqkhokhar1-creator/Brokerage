@@ -1,0 +1,18 @@
+{
+  "name": "@b-app/ai-embeddings",
+  "version": "1.0.0",
+  "description": "AI Embeddings block for semantic capability",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "joi": "^17.11.0",
+    "uuid": "^9.0.0",
+    "crypto": "*"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0"
+  }
+}
