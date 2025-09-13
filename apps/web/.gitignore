@@ -1,9 +1,0 @@
-# Node
-node_modules
-dist
-.next
-# Env
-.env
-.env.*
-# OS
-.DS_Store

@@ -1,0 +1,27 @@
+{
+  "todos": {
+    "Coordinator": {
+      "1": {
+        "id": "1",
+        "content": "Enhance InvestPro website with advanced microinteractions",
+        "details": "Add sophisticated hover effects, smooth transitions, loading animations, scroll-triggered animations, interactive buttons, form feedback, and other engaging microinteractions throughout the website",
+        "status": "completed",
+        "priority": "high"
+      },
+      "2": {
+        "id": "2",
+        "content": "Improve UX and UI for better readability",
+        "details": "Optimize typography, contrast ratios, whitespace, visual hierarchy, navigation flow, mobile responsiveness, and overall user experience for maximum readability and usability",
+        "status": "completed",
+        "priority": "high"
+      },
+      "3": {
+        "id": "3",
+        "content": "Enrich website content significantly",
+        "details": "Add more comprehensive educational content, detailed feature explanations, market insights, testimonials, FAQ sections, investment guides, Pakistani market data, and additional valuable information for users",
+        "status": "completed",
+        "priority": "high"
+      }
+    }
+  }
+}

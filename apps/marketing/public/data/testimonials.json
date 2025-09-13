@@ -1,0 +1,62 @@
+{
+  "testimonials": [
+    {
+      "id": 1,
+      "name": "Ahmed Hassan",
+      "role": "Software Engineer, Karachi",
+      "content": "InvestPro's AI recommendations helped me grow my portfolio by 22% in just 8 months. The platform is incredibly user-friendly and the customer support is outstanding.",
+      "rating": 5,
+      "image": "/images/testimonial-1.jpg",
+      "location": "Karachi",
+      "investmentReturn": "22%"
+    },
+    {
+      "id": 2,
+      "name": "Fatima Khan",
+      "role": "Business Owner, Lahore",
+      "content": "As a woman entrepreneur, I was hesitant about investing. InvestPro's educational content and robo-advisor made it so simple. My retirement fund has grown significantly.",
+      "rating": 5,
+      "image": "/images/testimonial-2.jpg",
+      "location": "Lahore",
+      "investmentReturn": "18%"
+    },
+    {
+      "id": 3,
+      "name": "Dr. Ali Raza",
+      "role": "Medical Professional, Islamabad",
+      "content": "The Shariah-compliant investing options are exactly what I was looking for. InvestPro ensures all my investments align with my Islamic values while delivering excellent returns.",
+      "rating": 5,
+      "image": "/images/testimonial-3.jpg",
+      "location": "Islamabad",
+      "investmentReturn": "16%"
+    },
+    {
+      "id": 4,
+      "name": "Sarah Ahmed",
+      "role": "Teacher, Karachi",
+      "content": "Started with just PKR 5,000 monthly SIP. Two years later, my portfolio is worth over PKR 200,000. The compound growth is amazing!",
+      "rating": 5,
+      "image": "/images/testimonial-4.jpg",
+      "location": "Karachi",
+      "investmentReturn": "24%"
+    }
+  ],
+  "successStories": [
+    {
+      "title": "From PKR 10K to PKR 500K",
+      "description": "Young professional doubles investment in 18 months",
+      "timeframe": "18 months",
+      "initialInvestment": "PKR 10,000",
+      "finalValue": "PKR 500,000",
+      "strategy": "AI-guided equity portfolio"
+    },
+    {
+      "title": "Retirement Dream Achieved",
+      "description": "52-year-old builds PKR 2M retirement fund",
+      "timeframe": "3 years",
+      "initialInvestment": "PKR 25,000/month",
+      "finalValue": "PKR 2,000,000",
+      "strategy": "Balanced mutual fund portfolio"
+    }
+  ]
+}
