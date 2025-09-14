@@ -1,5 +1,6 @@
+"use client";
 import React, { useState, useRef } from 'react';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useSpring, useTransform } from '@/components/MotionWrappers';
 import { cn } from '@/lib/utils';
 
 interface EnhancedCardProps {

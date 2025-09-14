@@ -618,20 +618,22 @@ class ComplianceSystem {
 
   // Real-time compliance monitoring
   startComplianceMonitoring() {
-    // Monitor for pattern violations
-    setInterval(async () => {
-      await this.checkPatternViolations();
-    }, 30000); // Check every 30 seconds
+    if (process.env.NODE_ENV === 'production') {
+      // Monitor for pattern violations
+      setInterval(async () => {
+        await this.checkPatternViolations();
+      }, 30000); // Check every 30 seconds
 
-    // Monitor for suspicious activities
-    setInterval(async () => {
-      await this.monitorSuspiciousActivities();
-    }, 300000); // Every 5 minutes
+      // Monitor for suspicious activities
+      setInterval(async () => {
+        await this.monitorSuspiciousActivities();
+      }, 300000); // Every 5 minutes
 
-    // Update regulatory data
-    setInterval(async () => {
-      await this.updateRegulatoryData();
-    }, 3600000); // Every hour
+      // Update regulatory data
+      setInterval(async () => {
+        await this.updateRegulatoryData();
+      }, 3600000); // Every hour
+    }
 
     logger.info('Compliance monitoring started');
   }

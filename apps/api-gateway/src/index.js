@@ -1,6 +1,9 @@
+console.log('Starting API Gateway...');
 require('dotenv').config();
+console.log('dotenv loaded');
 
 const express = require('express');
+console.log('express loaded');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -131,13 +134,57 @@ app.use('/api/v1', apiRoutes);
 
 // Enhanced health check endpoint
 // Import all enterprise services
-const { tradingEngine } = require('./services/tradingEngine');
-const { marketDataService } = require('./services/marketDataService');
-const { riskManagementSystem } = require('./services/riskManagementSystem');
-const { complianceSystem } = require('./services/complianceSystem');
-const { orderManagementSystem } = require('./services/orderManagementSystem');
-const { notificationSystem } = require('./services/notificationSystem');
-const { slideToExecuteService } = require('./services/slideToExecuteService');
+console.log('Loading services...');
+let tradingEngine, marketDataService, riskManagementSystem, complianceSystem, orderManagementSystem, notificationSystem, slideToExecuteService;
+
+try {
+  tradingEngine = require('./services/tradingEngine').tradingEngine;
+  console.log('tradingEngine loaded');
+} catch (e) {
+  console.error('Error loading tradingEngine:', e.message);
+}
+
+try {
+  marketDataService = require('./services/marketDataService').marketDataService;
+  console.log('marketDataService loaded');
+} catch (e) {
+  console.error('Error loading marketDataService:', e.message);
+}
+
+try {
+  riskManagementSystem = require('./services/riskManagementSystem').riskManagementSystem;
+  console.log('riskManagementSystem loaded');
+} catch (e) {
+  console.error('Error loading riskManagementSystem:', e.message);
+}
+
+try {
+  complianceSystem = require('./services/complianceSystem').complianceSystem;
+  console.log('complianceSystem loaded');
+} catch (e) {
+  console.error('Error loading complianceSystem:', e.message);
+}
+
+try {
+  orderManagementSystem = require('./services/orderManagementSystem').orderManagementSystem;
+  console.log('orderManagementSystem loaded');
+} catch (e) {
+  console.error('Error loading orderManagementSystem:', e.message);
+}
+
+try {
+  notificationSystem = require('./services/notificationSystem').notificationSystem;
+  console.log('notificationSystem loaded');
+} catch (e) {
+  console.error('Error loading notificationSystem:', e.message);
+}
+
+try {
+  slideToExecuteService = require('./services/slideToExecuteService').slideToExecuteService;
+  console.log('slideToExecuteService loaded');
+} catch (e) {
+  console.error('Error loading slideToExecuteService:', e.message);
+}
 
 // Health check endpoint with comprehensive service monitoring
 app.get('/health', async (req, res) => {
@@ -274,9 +321,16 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 const port = process.env.PORT || 5001;
+console.log(`Attempting to start server on port ${port}...`);
 
 // Start server with enhanced logging
-server.listen(port, () => {
+server.listen(port, (err) => {
+  if (err) {
+    console.error('Server failed to start:', err);
+    process.exit(1);
+  }
+  
+  console.log('Server started successfully!');
   logger.info('🚀 Brokerage Platform API Server Started', {
     port,
     environment: process.env.NODE_ENV || 'development',

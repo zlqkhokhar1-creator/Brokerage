@@ -1,5 +1,6 @@
+"use client";
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from '@/components/MotionWrappers';
 import { useInView } from 'react-intersection-observer';
 
 interface CountUpProps {

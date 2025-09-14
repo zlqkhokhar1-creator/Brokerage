@@ -1,5 +1,6 @@
+"use client";
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from '@/components/MotionWrappers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EnhancedCard } from '@/components/ui/EnhancedCard';
@@ -13,8 +14,7 @@ import {
   TrendingDown,
   ArrowRight,
   Eye,
-  RefreshCw,
-  Loader2
+  RefreshCw
 } from 'lucide-react';
 
 interface StockAnalysis {
@@ -379,7 +379,6 @@ export const AIAnalyticsDemo: React.FC = () => {
                                 </p>
                               </div>
                             </div>
-                          </div>
 
                           <div className="pt-4 border-t">
                             <div className="flex justify-between items-center">
@@ -516,7 +515,6 @@ export const AIAnalyticsDemo: React.FC = () => {
                       </div>
                     </div>
                   </EnhancedCard>
-                </motion.div>
               </div>
             </div>
           </div>

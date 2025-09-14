@@ -1,3 +1,4 @@
+"use client";
 /**
  * 💳 SUBSCRIPTION PAYMENT COMPONENT
  * 

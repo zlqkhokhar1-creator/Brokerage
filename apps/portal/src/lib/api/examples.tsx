@@ -1,3 +1,4 @@
+"use client";
 /**
  * Example API Integration for React Components
  * This file demonstrates how to use the API utilities in your app

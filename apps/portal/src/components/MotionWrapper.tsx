@@ -1,4 +1,4 @@
-import { motion, Variants } from 'framer-motion';
+import { motion, Variants } from '@/components/MotionWrappers';
 import React from 'react';
 
 interface MotionWrapperProps {

@@ -1,3 +1,4 @@
+"use client";
 'use client';
 
 import Link from "next/link";
@@ -41,16 +42,16 @@ export default function Navigation() {
                 onMouseEnter={() => setDropdownOpen(true)}
                 onMouseLeave={() => setDropdownOpen(false)}
               >
-                <Link href="/portfolio-analytics" className="block px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2">
+                <Link href="/portfolio-analytics" className="px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2">
                   <BarChart3 className="w-4 h-4" /> Portfolio Analytics
                 </Link>
-                <Link href="/screener" className="block px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2">
+                <Link href="/screener" className="px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2">
                   <Search className="w-4 h-4" /> Stock Screener
                 </Link>
-                <Link href="/risk-management" className="block px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2">
+                <Link href="/risk-management" className="px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" /> Risk Management
                 </Link>
-                <Link href="/news" className="block px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2">
+                <Link href="/news" className="px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2">
                   <Globe className="w-4 h-4" /> Market News
                 </Link>
               </div>

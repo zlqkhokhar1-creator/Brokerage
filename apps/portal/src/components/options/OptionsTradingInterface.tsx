@@ -1,10 +1,11 @@
+"use client";
 'use client';
 
 import React, { useState, useMemo } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from '@/components/MotionWrappers';
 import { 
   ArrowUpDown, 
   ChevronDown, 

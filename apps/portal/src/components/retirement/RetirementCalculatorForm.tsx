@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion } from '@/components/MotionWrappers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Target, DollarSign, TrendingUp } from 'lucide-react';
 

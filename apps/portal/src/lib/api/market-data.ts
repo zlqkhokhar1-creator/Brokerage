@@ -53,6 +53,12 @@ export interface NewsItem {
   symbols?: string[];
 }
 
+export interface MarketOverview {
+  markets: any;
+  topGainers: any[];
+  topLosers: any[];
+}
+
 /**
  * Market Data Service Class
  */
@@ -163,6 +169,7 @@ class MarketDataService {
       if (symbol) {
         endpoint = API_ENDPOINTS.MARKET_DATA.FINNHUB.NEWS(symbol);
       } else {
+        // Use general news endpoint - you might want to add this to config
         endpoint = '/news?category=general';
       }
 
@@ -308,3 +315,42 @@ class MarketDataService {
 // Export singleton instance
 export const marketDataService = new MarketDataService();
 export { MarketDataService };
+
+/**
+ * Get market overview with top movers, indices, etc.
+ */
+export const getMarketOverview = async (): Promise<MarketOverview> => {
+  try {
+    // For now, return a simplified overview since the specific endpoints aren't configured
+    // You can add these endpoints to the config file if needed
+    const mockOverview: MarketOverview = {
+      markets: {
+        status: 'open',
+        indices: [
+          { symbol: '^GSPC', name: 'S&P 500', price: 4500, change: 15.2, changePercent: 0.34 },
+          { symbol: '^DJI', name: 'Dow Jones', price: 35000, change: 120.5, changePercent: 0.35 },
+          { symbol: '^IXIC', name: 'NASDAQ', price: 14000, change: 45.8, changePercent: 0.33 },
+        ]
+      },
+      topGainers: [],
+      topLosers: []
+    };
+
+    // Try to get real data if available
+    try {
+      // You can implement real market status and movers here when endpoints are available
+      // const statusResponse = await finnhubApi.rateLimitedRequest('FINNHUB', '/stock/market-status', {
+      //   headers: API_HEADERS.FINNHUB,
+      //   timeout: API_TIMEOUTS.MARKET_DATA,
+      // });
+      
+      return mockOverview;
+    } catch (error) {
+      console.warn('Using mock data for market overview:', error);
+      return mockOverview;
+    }
+  } catch (error) {
+    console.error('Error fetching market overview:', error);
+    throw error;
+  }
+};

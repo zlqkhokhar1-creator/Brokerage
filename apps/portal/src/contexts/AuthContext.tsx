@@ -10,6 +10,7 @@ interface User {
   lastName: string;
   kycStatus: string;
   twoFactorEnabled: boolean;
+  hasCompletedOnboarding: boolean;
 }
 
 interface AuthContextType {
@@ -51,6 +52,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    // 🚀 Dev mode: instantly log in with a fake user
+    // Check both NODE_ENV and if we're in a Docker environment
+    const isDevelopment = process.env.NODE_ENV === 'development' || 
+                         process.env.NEXT_PUBLIC_API_URL?.includes('localhost') ||
+                         typeof window !== 'undefined' && window.location.hostname === 'localhost';
+    
+    if (isDevelopment) {
+      const devUser: User = {
+        id: 'dev-1',
+        email: 'dev@example.com',
+        firstName: 'Dev',
+        lastName: 'User',
+        kycStatus: 'approved',
+        twoFactorEnabled: false,
+        hasCompletedOnboarding: true,
+      };
+      setUser(devUser);
+      setLoading(false);
+      // Optional: auto‑redirect to dashboard
+      if (typeof window !== 'undefined' && (window.location.pathname === '/' || window.location.pathname === '/login')) {
+        router.push('/dashboard');
+      }
+      return;
+    }
+
+    // Production: run real auth check
     checkAuthStatus();
   }, []);
 
@@ -59,7 +86,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const token = localStorage.getItem('token');
       const demo = localStorage.getItem('demo');
       if (demo === '1') {
-        // Demo session
         setUser(JSON.parse(localStorage.getItem('demo_user') || 'null'));
         setLoading(false);
         return;
@@ -91,7 +117,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (email: string, password: string, rememberMe = false) => {
-    // Offline demo login (no API)
+    // Dev mode: skip login entirely
+    if (process.env.NODE_ENV === 'development') {
+      const devUser: User = {
+        id: 'dev-1',
+        email: 'dev@example.com',
+        firstName: 'Dev',
+        lastName: 'User',
+        kycStatus: 'approved',
+        twoFactorEnabled: false,
+        hasCompletedOnboarding: true,
+      };
+      setUser(devUser);
+      router.push('/dashboard');
+      return;
+    }
+
+    // Offline demo login
     if (email === 'demo@investpro.com' && password === 'demo123') {
       const demoUser: User = {
         id: 'demo-1',
@@ -100,6 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         lastName: 'User',
         kycStatus: 'approved',
         twoFactorEnabled: false,
+        hasCompletedOnboarding: false,
       };
       localStorage.setItem('demo', '1');
       localStorage.setItem('demo_user', JSON.stringify(demoUser));
@@ -112,17 +155,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, rememberMe }),
       });
 
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
+      if (!response.ok) throw new Error(data.message || 'Login failed');
 
       localStorage.setItem('token', data.token);
       localStorage.removeItem('demo');
@@ -136,7 +174,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (_userData: RegisterData) => {
-    // Registration disabled for demo
     throw new Error('Registration is currently disabled in demo mode. Please use the demo login.');
   };
 
@@ -186,10 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Profile update failed');
-      }
+      if (!response.ok) throw new Error(data.message || 'Profile update failed');
 
       setUser(prev => prev ? { ...prev, ...userData } : null);
     } catch (error) {
@@ -198,20 +232,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const value = {
-    user,
-    loading,
-    login,
-    register,
-    logout,
-    updateProfile,
-  };
+  const value = { user, loading, login, register, logout, updateProfile };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
@@ -221,5 +244,3 @@ export function useAuth() {
   }
   return context;
 }
-
-

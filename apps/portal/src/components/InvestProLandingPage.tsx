@@ -1,3 +1,4 @@
+"use client";
 'use client';
 
 import React, { useState } from 'react';
@@ -14,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion } from "@/components/MotionWrappers";
 // Animation wrapper components with TypeScript types
 interface MotionWrapperProps {
   children: React.ReactNode;

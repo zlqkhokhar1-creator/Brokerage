@@ -1,3 +1,4 @@
+"use client";
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,22 +7,24 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Brain, 
-  TrendingUp, 
-  TrendingDown, 
-  Target, 
-  Shield, 
-  BarChart3, 
-  PieChart, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  Brain,
+  TrendingUp,
+  TrendingDown,
+  Target,
+  Shield,
+  BarChart3,
+  PieChart,
+  AlertTriangle,
+  CheckCircle,
   RefreshCw,
   Star,
   Lightbulb,
   Zap
 } from 'lucide-react';
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { Shell } from '@/components/shell/Shell';
+import { InspectorPanel } from '@/components/inspector/InspectorPanel';
 
 interface Recommendation {
   id: string;
@@ -310,8 +313,9 @@ export default function AIRecommendationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white p-6">
-      <div className="max-w-7xl mx-auto">
+    <Shell right={<InspectorPanel />} showWorkspaceTabs={false}>
+      <div className="min-h-screen bg-[#0A0A0A] text-white p-6">
+        <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
@@ -604,7 +608,8 @@ export default function AIRecommendationsPage() {
             </Card>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </Shell>
   );
 }

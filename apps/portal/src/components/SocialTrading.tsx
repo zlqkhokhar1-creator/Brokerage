@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -112,7 +113,7 @@ const SocialTrading: React.FC = () => {
       setLoading(true);
       
       // Fetch top traders
-      const tradersResponse = await fetch(`/api/v1/social/traders?sort=${sortBy}&filter=${filterBy}`, {
+      const tradersResponse = await fetch(`/api/v1/social-trading/traders?sort=${sortBy}&filter=${filterBy}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       
@@ -122,7 +123,7 @@ const SocialTrading: React.FC = () => {
       }
 
       // Fetch recent trades
-      const tradesResponse = await fetch('/api/v1/social/trades/recent', {
+      const tradesResponse = await fetch('/api/v1/social-trading/trades/recent', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       
@@ -132,7 +133,7 @@ const SocialTrading: React.FC = () => {
       }
 
       // Fetch social feed
-      const feedResponse = await fetch('/api/v1/social/feed', {
+      const feedResponse = await fetch('/api/v1/social-trading/feed', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       
@@ -142,7 +143,7 @@ const SocialTrading: React.FC = () => {
       }
 
       // Fetch copy trading positions
-      const copyResponse = await fetch('/api/v1/social/copy-positions', {
+      const copyResponse = await fetch('/api/v1/social-trading/copy-positions', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       
@@ -160,7 +161,7 @@ const SocialTrading: React.FC = () => {
 
   const followTrader = async (traderId: string) => {
     try {
-      const response = await fetch(`/api/v1/social/traders/${traderId}/follow`, {
+      const response = await fetch(`/api/v1/social-trading/traders/${traderId}/follow`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
@@ -175,7 +176,7 @@ const SocialTrading: React.FC = () => {
 
   const copyTrader = async (traderId: string, amount: number, copyRatio: number) => {
     try {
-      const response = await fetch(`/api/v1/social/traders/${traderId}/copy`, {
+      const response = await fetch(`/api/v1/social-trading/traders/${traderId}/copy`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -194,7 +195,7 @@ const SocialTrading: React.FC = () => {
 
   const likeTrade = async (tradeId: string) => {
     try {
-      const response = await fetch(`/api/v1/social/trades/${tradeId}/like`, {
+      const response = await fetch(`/api/v1/social-trading/trades/${tradeId}/like`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
@@ -209,7 +210,7 @@ const SocialTrading: React.FC = () => {
 
   const likePost = async (postId: string) => {
     try {
-      const response = await fetch(`/api/v1/social/posts/${postId}/like`, {
+      const response = await fetch(`/api/v1/social-trading/posts/${postId}/like`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });

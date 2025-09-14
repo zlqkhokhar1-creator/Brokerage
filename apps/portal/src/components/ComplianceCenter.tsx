@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -94,7 +95,7 @@ const ComplianceCenter: React.FC = () => {
       setLoading(true);
       
       // Fetch KYC status
-      const kycResponse = await fetch('/api/v1/compliance/kyc/status', {
+      const kycResponse = await fetch('/api/v1/kyc/status', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       
@@ -104,7 +105,7 @@ const ComplianceCenter: React.FC = () => {
       }
 
       // Fetch compliance alerts
-      const alertsResponse = await fetch('/api/v1/compliance/alerts', {
+      const alertsResponse = await fetch('/api/v1/compliance/dashboard', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       
@@ -132,7 +133,7 @@ const ComplianceCenter: React.FC = () => {
 
   const submitKYCSection = async (section: string, data: any) => {
     try {
-      const response = await fetch('/api/v1/compliance/kyc', {
+      const response = await fetch('/api/v1/kyc/information', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -160,7 +161,7 @@ const ComplianceCenter: React.FC = () => {
       formData.append('file', file);
       formData.append('type', documentType);
 
-      const response = await fetch('/api/v1/compliance/documents/upload', {
+      const response = await fetch('/api/v1/kyc/documents', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

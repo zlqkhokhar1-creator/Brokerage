@@ -1,7 +1,8 @@
+"use client";
 'use client';
 
 import { useState, useEffect } from 'react';
-import ModernDashboardLayout from '@/components/ModernDashboardLayout';
+import { AppLayout } from '@/components/AppLayout';
 import { AIInsightsDashboard } from '@/components/dashboard/AIInsightsDashboard';
 import { RiskManagementDashboard } from '@/components/risk/RiskManagementDashboard';
 import { PersonalizedDashboard } from '@/components/dashboard/PersonalizedDashboard';
@@ -60,7 +61,7 @@ export default function ModernDashboardPage() {
   };
 
   return (
-    <ModernDashboardLayout>
+    <AppLayout>
       <div className="space-y-6 relative">
         {/* AI Assistant Floating Button - Only show on mobile or when not in AI chat tab */}
         {(!showAIAssistant || !isMobile) && (
@@ -72,14 +73,9 @@ export default function ModernDashboardPage() {
               onClick={toggleAIAssistant}
               className="rounded-full h-14 w-14 p-0 bg-primary hover:bg-primary/90 shadow-lg z-50"
               size="icon"
+              aria-label="Toggle AI Assistant"
             >
-              <TabsTrigger value="ai-search" className="relative">
-                AI Search
-              </TabsTrigger>
-              <TabsTrigger value="bias-detection" className="relative">
-                Bias Detection
-              </TabsTrigger>
-              <span className="relative">
+              <span className="relative pointer-events-none">
                 <svg
                   className="h-6 w-6 text-white"
                   fill="none"
@@ -170,6 +166,6 @@ export default function ModernDashboardPage() {
           />
         )}
       </div>
-    </ModernDashboardLayout>
+    </AppLayout>
   );
 }

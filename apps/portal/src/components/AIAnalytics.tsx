@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -88,7 +89,7 @@ const AIAnalytics: React.FC = () => {
       setLoading(true);
       
       // Fetch AI insights
-      const insightsResponse = await fetch('/api/v1/ai/insights', {
+      const insightsResponse = await fetch('/api/v1/ai-recommendations/insights', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       
@@ -98,7 +99,7 @@ const AIAnalytics: React.FC = () => {
       }
 
       // Fetch market predictions
-      const predictionsResponse = await fetch(`/api/v1/ai/predictions?timeframe=${selectedTimeframe}`, {
+      const predictionsResponse = await fetch(`/api/v1/ai-recommendations/recommendations?timeframe=${selectedTimeframe}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       

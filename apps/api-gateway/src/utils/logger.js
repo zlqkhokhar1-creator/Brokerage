@@ -52,47 +52,49 @@ const fileFormat = winston.format.combine(
 // Create logs directory if it doesn't exist
 const fs = require('fs');
 const logsDir = path.join(__dirname, '../../logs');
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir, { recursive: true });
+try {
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+  }
+} catch (error) {
+  console.warn('Could not create logs directory:', error.message);
 }
 
 // Configure transports
-const transports = [
-  // Error log file
-  new winston.transports.File({
-    filename: path.join(logsDir, 'error.log'),
-    level: 'error',
-    format: fileFormat,
-    maxsize: 5242880, // 5MB
-    maxFiles: 5
-  }),
-  
-  // Combined log file
-  new winston.transports.File({
-    filename: path.join(logsDir, 'combined.log'),
-    format: fileFormat,
-    maxsize: 5242880, // 5MB
-    maxFiles: 5
-  }),
-  
-  // HTTP requests log
-  new winston.transports.File({
-    filename: path.join(logsDir, 'http.log'),
-    level: 'http',
-    format: fileFormat,
-    maxsize: 5242880, // 5MB
-    maxFiles: 3
-  })
-];
+const transports = [];
 
-// Add console transport for development
-if (process.env.NODE_ENV !== 'production') {
-  transports.push(
-    new winston.transports.Console({
-      level: 'debug',
-      format: consoleFormat
-    })
-  );
+// Always use console transport for simplicity
+transports.push(
+  new winston.transports.Console({
+    level: process.env.LOG_LEVEL || 'info',
+    format: consoleFormat
+  })
+);
+
+// Only add file transports if logs directory is accessible
+try {
+  if (fs.existsSync(logsDir)) {
+    transports.push(
+      new winston.transports.File({
+        filename: path.join(logsDir, 'error.log'),
+        level: 'error',
+        format: fileFormat,
+        maxsize: 5242880, // 5MB
+        maxFiles: 5
+      })
+    );
+    
+    transports.push(
+      new winston.transports.File({
+        filename: path.join(logsDir, 'combined.log'),
+        format: fileFormat,
+        maxsize: 5242880, // 5MB
+        maxFiles: 5
+      })
+    );
+  }
+} catch (error) {
+  console.warn('Could not configure file logging:', error.message);
 }
 
 // Create logger instance

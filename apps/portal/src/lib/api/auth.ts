@@ -487,3 +487,16 @@ class AuthService {
 // Export singleton instance
 export const authService = new AuthService();
 export { AuthService };
+
+// Exported functions for convenience
+export const login = (credentials: LoginRequest) => authService.login(credentials);
+export const register = (userData: RegisterRequest) => authService.register(userData);
+export const logout = () => authService.logout();
+export const getProfile = () => authService.getProfile();
+export const updateProfile = (updates: UpdateProfileRequest) => authService.updateProfile(updates);
+export const changePassword = (currentPassword: string, newPassword: string) => authService.changePassword({ currentPassword, newPassword });
+export const requestPasswordReset = (email: string) => authService.requestPasswordReset(email);
+export const confirmPasswordReset = (resetData: PasswordResetConfirm) => authService.confirmPasswordReset(resetData);
+export const verifyEmail = (token: string) => authService.verifyEmail(token);
+export const enableTwoFactor = () => authService.enableTwoFactor();
+export const disableTwoFactor = (code: string) => authService.disableTwoFactor(code);

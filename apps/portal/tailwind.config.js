@@ -8,53 +8,58 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        'background-alt': "hsl(var(--background-alt))",
-        foreground: "hsl(var(--foreground))",
+        border: 'var(--border)',
+        input: 'var(--input)',
+        ring: 'var(--ring)',
+        background: 'var(--background)',
+        'background-alt': 'var(--background-alt)',
+        foreground: 'var(--foreground)',
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-          50: "hsl(var(--primary-50))",
+          DEFAULT: 'var(--primary)',
+          foreground: 'var(--primary-foreground)',
+          50: 'var(--primary-50)',
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: 'var(--secondary)',
+          foreground: 'var(--secondary-foreground)',
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: 'var(--destructive)',
+          foreground: 'var(--destructive-foreground)',
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: 'var(--muted)',
+          foreground: 'var(--muted-foreground)',
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: 'var(--accent)',
+          foreground: 'var(--accent-foreground)',
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: 'var(--popover)',
+          foreground: 'var(--popover-foreground)',
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: 'var(--card)',
+          foreground: 'var(--card-foreground)',
+          hover: 'var(--card-hover)',
+          secondary: 'var(--card-secondary)',
         },
+        border: 'var(--border)',
+        success: 'var(--success)',
+        destructive: 'var(--error)',
       },
       backgroundImage: {
-        'gradient-primary': 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary)) 50%, hsl(var(--accent)) 100%)',
-        'gradient-secondary': 'linear-gradient(135deg, hsl(var(--secondary)) 0%, hsl(var(--accent)) 100%)',
+        'gradient-primary': 'linear-gradient(135deg, var(--primary) 0%, var(--primary) 50%, var(--accent) 100%)',
+        'gradient-secondary': 'linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%)',
       },
       fontFamily: {
         'heading': ['var(--font-heading)', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
       },
       animation: {
         'float': 'float 6s ease-in-out infinite',
@@ -64,7 +69,7 @@ module.exports = {
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-20px)' },
-        }
+        },
       },
       perspective: {
         '1000': '1000px',
@@ -76,5 +81,26 @@ module.exports = {
   },
   plugins: [
     require('tailwindcss-animate'),
+    function({ addUtilities }) {
+      addUtilities({
+        '.glass-card': {
+          '@apply bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl': {},
+          'background': 'linear-gradient(135deg, rgba(17, 19, 24, 0.8) 0%, rgba(26, 29, 35, 0.8) 100%)',
+          'box-shadow': 'var(--shadow-lg)',
+        },
+        '.glass-card-hover': {
+          '@apply glass-card transition-all duration-300 ease-out': {},
+        },
+        '.glass-card-hover:hover': {
+          '@apply shadow-xl scale-[1.02]': {},
+          'box-shadow': 'var(--shadow-glow)',
+        },
+        '.elevated-card': {
+          '@apply bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl shadow-lg': {},
+          'background': 'linear-gradient(135deg, rgba(17, 19, 24, 0.9) 0%, rgba(26, 29, 35, 0.9) 100%)',
+          'box-shadow': 'var(--shadow-lg)',
+        },
+      })
+    }
   ],
-}
+};

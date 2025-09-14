@@ -1,7 +1,8 @@
+"use client";
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from '@/components/MotionWrappers';
 import { Button } from '@/components/ui/button';
 import { Calculator, DollarSign, BarChart3, Target, BookOpen } from 'lucide-react';
 import { RetirementCalculatorForm } from './retirement/RetirementCalculatorForm';

@@ -1,3 +1,38 @@
+# Portal
+
+## InvestPro Frontend System Design
+
+### Component map (reusable UI)
+- Buttons: primary, secondary, ghost, destructive; loading, disabled, icon-only
+- Navigation: `ResponsiveSidebar`, top header, tabs, breadcrumbs
+- Cards: base `Card`, `KpiCard`, AI card, elevated card
+- Data viz: `InteractiveLineChart`, area/line, pie, heatmap (via recharts/visx)
+- Tables: positions table, trades table (TanStack Table)
+- Forms: input, label, select, checkbox, radio, slider, switch, date picker
+- Feedback: toast, tooltip, alert, skeleton, spinner
+- Overlays: modal/dialog, drawer/sheet, popover, hovercard
+- Panels: resizable panels, accordions, collapsibles
+- Charts: performance, allocation, activity (composed components)
+
+### Pages wired
+- Landing (`/` via auth gate), Login/Signup, Onboarding (`/onboarding`)
+- Dashboard (`/dashboard`), Portfolio (overview, holdings, allocation, performance)
+- Risk Management (`/risk-management`), Markets (`/markets`), Screener, Orders
+- AI Insights (`/ai-insights`)
+
+### Responsive strategy
+- Desktop: 12-col grid, persistent left sidebar 256px, content max-w-[1600px]
+- Tablet: sidebar collapses; major modules stack; charts min-height 240
+- Mobile: sticky top bar and slide-over menu; KPI cards in 2-col → 1-col
+
+### Motion and micro-interactions
+- Framer Motion for enter/exit, hover-lift, subtle chart transitions
+- Focus-visible rings and WCAG AA contrast; prefers-reduced-motion respected
+
+### Theming
+- Tailwind v4 theme tokens mapped to CSS vars in `src/app/globals.css`
+- Dark is default for dashboards; light for onboarding/compliance
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

@@ -1,58 +1,61 @@
+"use client";
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
+import {
+  Card,
+  CardContent,
+  CardHeader,
   CardTitle,
-  CardDescription 
+  CardDescription
 } from '@/components/ui/card';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
-import { 
-  Button 
+import {
+  Button
 } from '@/components/ui/button';
-import { 
-  Badge 
+import {
+  Badge
 } from '@/components/ui/badge';
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
 } from '@/components/ui/tabs';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  PieChart as RechartsPieChart, 
-  Pie, 
-  Cell, 
-  AreaChart, 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  AreaChart,
   Area,
   BarChart,
-  Bar 
+  Bar
 } from 'recharts';
-import { 
-  Download, 
-  TrendingUp, 
-  TrendingDown, 
-  PieChart, 
-  BarChart3, 
-  Target 
+import {
+  Download,
+  TrendingUp,
+  TrendingDown,
+  PieChart,
+  BarChart3,
+  Target
 } from 'lucide-react';
 import { AIPortfolioRecommendations } from '@/components/portfolio/AIPortfolioRecommendations';
 import { AIAdvancedAnalytics } from '@/components/portfolio/AIAdvancedAnalytics';
+import { Shell } from '@/components/shell/Shell';
+import { InspectorPanel } from '@/components/inspector/InspectorPanel';
 
 interface PortfolioMetrics {
   totalValue: number;
@@ -230,8 +233,9 @@ export default function PortfolioAnalyticsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <Shell right={<InspectorPanel />} showWorkspaceTabs={false}>
+      <div className="min-h-screen bg-[#0A0A0A] text-white p-6">
+        <div className="max-w-7xl mx-auto space-y-8">
         {/* AI Portfolio Recommendations Section */}
         <AIPortfolioRecommendations />
         
@@ -587,7 +591,8 @@ export default function PortfolioAnalyticsPage() {
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
-    </div>
+    </Shell>
   );
 }

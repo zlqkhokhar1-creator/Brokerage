@@ -1,5 +1,6 @@
+"use client";
 import React, { useRef, useState } from 'react';
-import { motion, useAnimation, useMotionValue, useTransform } from 'framer-motion';
+import { motion, useAnimation, useMotionValue, useTransform } from '@/components/MotionWrappers';
 import { Button } from '@/components/ui/button';
 import type { ButtonHTMLAttributes } from 'react';
 

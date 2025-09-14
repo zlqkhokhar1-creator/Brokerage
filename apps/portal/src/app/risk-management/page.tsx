@@ -1,7 +1,9 @@
+"use client";
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -145,7 +147,8 @@ export default function RiskManagementPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white p-6">
+    <AppLayout>
+    <div className="min-h-[calc(100vh-4rem)] bg-background text-foreground p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -155,53 +158,53 @@ export default function RiskManagementPage() {
 
         {/* Risk Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-[#111111] border-[#1E1E1E]">
+          <Card className="elevated-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-400">Portfolio VaR (Daily)</p>
-                  <p className="text-2xl font-bold text-red-400">{formatCurrency(riskMetrics.varDaily)}</p>
+                  <p className="text-2xl font-bold text-destructive">{formatCurrency(riskMetrics.varDaily)}</p>
                 </div>
-                <TrendingDown className="h-8 w-8 text-red-400" />
+                <TrendingDown className="h-8 w-8 text-destructive" />
               </div>
               <p className="text-xs text-gray-500 mt-2">99% confidence, 1-day horizon</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-[#111111] border-[#1E1E1E]">
+          <Card className="elevated-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-400">Sharpe Ratio</p>
-                  <p className="text-2xl font-bold text-green-400">{riskMetrics.sharpeRatio}</p>
+                  <p className="text-2xl font-bold text-success">{riskMetrics.sharpeRatio}</p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-green-400" />
+                <TrendingUp className="h-8 w-8 text-success" />
               </div>
               <p className="text-xs text-gray-500 mt-2">Risk-adjusted return</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-[#111111] border-[#1E1E1E]">
+          <Card className="elevated-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-400">Portfolio Beta</p>
-                  <p className="text-2xl font-bold text-blue-400">{riskMetrics.beta}</p>
+                  <p className="text-2xl font-bold text-accent">{riskMetrics.beta}</p>
                 </div>
-                <BarChart3 className="h-8 w-8 text-blue-400" />
+                <BarChart3 className="h-8 w-8 text-accent" />
               </div>
               <p className="text-xs text-gray-500 mt-2">Market correlation</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-[#111111] border-[#1E1E1E]">
+          <Card className="elevated-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-400">Max Drawdown</p>
-                  <p className="text-2xl font-bold text-red-400">{riskMetrics.maxDrawdown}%</p>
+                  <p className="text-2xl font-bold text-destructive">{riskMetrics.maxDrawdown}%</p>
                 </div>
-                <AlertTriangle className="h-8 w-8 text-red-400" />
+                <AlertTriangle className="h-8 w-8 text-destructive" />
               </div>
               <p className="text-xs text-gray-500 mt-2">Largest peak-to-trough decline</p>
             </CardContent>
@@ -210,39 +213,39 @@ export default function RiskManagementPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Risk History Chart */}
-          <Card className="bg-[#111111] border-[#1E1E1E]">
+          <Card className="elevated-card">
             <CardHeader>
               <CardTitle>Risk History</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={riskHistoryData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                  <XAxis dataKey="date" stroke="#666" />
-                  <YAxis stroke="#666" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                  <XAxis dataKey="date" stroke="var(--color-muted-foreground)" />
+                  <YAxis stroke="var(--color-muted-foreground)" />
                   <Tooltip 
                     contentStyle={{ 
-                      backgroundColor: '#1a1a1a', 
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-card)', 
+                      border: '1px solid var(--color-border)',
                       borderRadius: '6px'
                     }} 
                   />
                   <Line type="monotone" dataKey="var" stroke="#ef4444" strokeWidth={2} name="VaR" />
-                  <Line type="monotone" dataKey="risk" stroke="#3b82f6" strokeWidth={2} name="Risk %" />
+                  <Line type="monotone" dataKey="risk" stroke="var(--color-accent)" strokeWidth={2} name="Risk %" />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
           {/* Position Risk Breakdown */}
-          <Card className="bg-[#111111] border-[#1E1E1E]">
+          <Card className="elevated-card">
             <CardHeader>
               <CardTitle>Position Risk Analysis</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {positionRisks.map((position, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border border-[#1E1E1E] rounded-lg">
+                  <div key={index} className="flex items-center justify-between p-3 border border-border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div>
                         <div className="font-semibold">{position.symbol}</div>
@@ -265,7 +268,7 @@ export default function RiskManagementPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Stress Testing */}
-          <Card className="bg-[#111111] border-[#1E1E1E]">
+          <Card className="elevated-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="w-5 h-5" />
@@ -286,7 +289,7 @@ export default function RiskManagementPage() {
                   <div className="space-y-3">
                     <h4 className="font-semibold">Stress Test Results</h4>
                     {stressTestResults.map((result, index) => (
-                      <div key={index} className="p-3 border border-[#1E1E1E] rounded-lg">
+                      <div key={index} className="p-3 border border-border rounded-lg">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium">{result.scenario}</span>
                           <span className={`font-bold ${result.impactPercent < -10 ? 'text-red-400' : result.impactPercent < -5 ? 'text-yellow-400' : 'text-green-400'}`}>
@@ -304,7 +307,7 @@ export default function RiskManagementPage() {
           </Card>
 
           {/* Position Size Calculator */}
-          <Card className="bg-[#111111] border-[#1E1E1E]">
+          <Card className="elevated-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calculator className="w-5 h-5" />
@@ -348,7 +351,7 @@ export default function RiskManagementPage() {
                 </Button>
 
                 {positionSizeCalc.recommendedSize > 0 && (
-                  <div className="p-4 border border-[#1E1E1E] rounded-lg bg-[#0A0A0A]">
+                  <div className="p-4 border border-border rounded-lg bg-background">
                     <div className="text-center">
                       <div className="text-sm text-gray-400 mb-1">Recommended Position Size</div>
                       <div className="text-2xl font-bold text-green-400">
@@ -366,5 +369,6 @@ export default function RiskManagementPage() {
         </div>
       </div>
     </div>
+    </AppLayout>
   );
 }

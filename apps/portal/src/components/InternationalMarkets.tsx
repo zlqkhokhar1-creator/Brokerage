@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -105,7 +106,7 @@ const InternationalMarkets: React.FC = () => {
       setLoading(true);
       
       // Fetch international markets data
-      const marketsResponse = await fetch('/api/v1/markets/international', {
+      const marketsResponse = await fetch('/api/v1/international-markets/markets', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       
@@ -115,7 +116,7 @@ const InternationalMarkets: React.FC = () => {
       }
 
       // Fetch international stocks
-      const stocksResponse = await fetch(`/api/v1/markets/international/stocks${selectedMarket !== 'ALL' ? `?market=${selectedMarket}` : ''}`, {
+      const stocksResponse = await fetch(`/api/v1/international-markets/securities${selectedMarket !== 'ALL' ? `?market=${selectedMarket}` : ''}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       
@@ -125,7 +126,7 @@ const InternationalMarkets: React.FC = () => {
       }
 
       // Fetch currency rates
-      const currenciesResponse = await fetch('/api/v1/markets/currencies', {
+      const currenciesResponse = await fetch('/api/v1/international-markets/currencies', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       
@@ -135,7 +136,7 @@ const InternationalMarkets: React.FC = () => {
       }
 
       // Fetch market hours
-      const hoursResponse = await fetch('/api/v1/markets/hours', {
+      const hoursResponse = await fetch('/api/v1/international-markets/trading-hours', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       
@@ -145,7 +146,7 @@ const InternationalMarkets: React.FC = () => {
       }
 
       // Fetch international news
-      const newsResponse = await fetch('/api/v1/markets/international/news', {
+      const newsResponse = await fetch('/api/v1/international-markets/news', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       

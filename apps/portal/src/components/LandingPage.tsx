@@ -54,7 +54,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
             <div className="lg:col-span-6 mt-12 lg:mt-0">
               <div className="relative">
                 <img
-                  src="https://images.unsplash.com/photo-1648293981217-420f71485b59?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBmaW5hbmNpYWwlMjB0cmFkaW5nfGVufDF8fHx8MTc1NzEzOTYwOXww&ixlib=rb-4.1.0&q=80&w=1080"
+                  src="/trading-dashboard.jpg"
                   alt="Trading Dashboard"
                   className="w-full h-auto rounded-lg shadow-2xl"
                 />

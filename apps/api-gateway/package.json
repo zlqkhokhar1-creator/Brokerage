@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "start": "node src/minimal-index.js",
+    "dev": "nodemon src/minimal-index.js"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -19,7 +19,8 @@
     "ws": "^8.14.0",
     "uuid": "^9.0.0",
     "winston": "^3.11.0",
-    "joi": "^17.11.0"
+    "joi": "^17.11.0",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

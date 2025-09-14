@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
@@ -220,7 +221,7 @@ export function ModernLandingPage({ onNavigate }: ModernLandingPageProps) {
               <div className="relative">
                 <div className="relative z-10 bg-gradient-to-br from-card to-card/80 rounded-2xl p-8 shadow-2xl border border-border/50 backdrop-blur-sm">
                   <ImageWithFallback
-                    src="https://images.unsplash.com/photo-1742238616989-655cbb4bdf6e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBmaW5hbmNpYWwlMjB0ZWNobm9sb2d5fGVufDF8fHx8MTc1NzE0MDk5OXww&ixlib=rb-4.1.0&q=80&w=1080"
+                    src="/fintech-technology.jpg"
                     alt="TradePro Dashboard"
                     className="w-full h-auto rounded-xl"
                   />

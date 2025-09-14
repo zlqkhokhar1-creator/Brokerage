@@ -471,9 +471,11 @@ class TradingEngine extends EventEmitter {
 
   // Real-time risk monitoring
   startRiskMonitoring() {
-    setInterval(async () => {
-      await this.checkPortfolioRisks();
-    }, 10000); // Check every 10 seconds
+    if (process.env.NODE_ENV === 'production') {
+      setInterval(async () => {
+        await this.checkPortfolioRisks();
+      }, 10000); // Check every 10 seconds
+    }
   }
 
   // Check portfolio risks

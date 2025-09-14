@@ -1,6 +1,8 @@
+"use client";
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion } from '@/components/MotionWrappers';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -364,7 +366,7 @@ export const PrivateWealthPage: React.FC<PrivateWealthPageProps> = ({ onNavigate
             </motion.div>
           </div>
         </div>
-      </motion.section>
+      </MotionWrapper>
 
       {/* Services Section */}
       <section className="py-20">
@@ -724,5 +726,6 @@ export const PrivateWealthPage: React.FC<PrivateWealthPageProps> = ({ onNavigate
         </div>
       </section>
     </div>
+    </PageTransition>
   );
 };

@@ -1,3 +1,4 @@
+"use client";
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, Filter, Search, TrendingUp, TrendingDown, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Shell } from '@/components/shell/Shell';
+import { InspectorPanel } from '@/components/inspector/InspectorPanel';
 
 interface Order {
   id: string;
@@ -198,8 +201,9 @@ export default function OrderManagementPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white p-6">
-      <div className="max-w-7xl mx-auto">
+    <Shell right={<InspectorPanel />} showWorkspaceTabs={false}>
+      <div className="min-h-screen bg-[#0A0A0A] text-white p-6">
+        <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Order Management</h1>
@@ -508,7 +512,8 @@ export default function OrderManagementPage() {
             </Card>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </Shell>
   );
 }
