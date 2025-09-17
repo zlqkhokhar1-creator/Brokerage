@@ -3,6 +3,9 @@
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, Text, Group, Badge, Button, Tabs, NumberInput, Select, Stack } from '@mantine/core';
 import { TrendingUp, TrendingDown, DollarSign, BarChart3, Target } from 'lucide-react';
+import { React19TradingForm } from '@/components/trading/react19-trading-form';
+import { SimpleMarketData } from '@/components/trading/simple-market-data';
+import { useState, startTransition } from 'react';
 
 const marketData = [
   { symbol: 'AAPL', price: 175.43, change: '+3.45%', volume: '45.2M' },
@@ -17,6 +20,14 @@ const positions = [
 ];
 
 export default function TradingPage() {
+  const [showReact19, setShowReact19] = useState(false);
+
+  const toggleReact19 = () => {
+    startTransition(() => {
+      setShowReact19(!showReact19);
+    });
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -26,8 +37,40 @@ export default function TradingPage() {
             <h1 className="text-3xl font-bold text-white">Invest Pro Trading</h1>
             <p className="text-gray-400 mt-1">Execute trades and manage positions on Invest Pro</p>
           </div>
-          <Badge color="green" variant="light" size="lg">Market Open</Badge>
+          <div className="flex items-center gap-3">
+            <Button
+              variant={showReact19 ? "filled" : "outline"}
+              onClick={toggleReact19}
+              size="sm"
+            >
+              {showReact19 ? "Hide" : "Show"} React 19 Features
+            </Button>
+            <Badge color="green" variant="light" size="lg">Market Open</Badge>
+          </div>
         </div>
+
+        {/* React 19 Features Section */}
+        {showReact19 && (
+          <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card.Section withBorder inheritPadding py="xs">
+              <Group justify="space-between">
+                <Text fw={500} size="lg" c="white">🚀 React 19 Enhanced Trading</Text>
+                <Badge color="blue" variant="light">New Features</Badge>
+              </Group>
+            </Card.Section>
+            
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <Text fw={500} size="md" c="white" mb="sm">Live Market Data (React 19 Patterns)</Text>
+                <SimpleMarketData symbol="AAPL" />
+              </div>
+              <div>
+                <Text fw={500} size="md" c="white" mb="sm">Smart Trading Form (useTransition)</Text>
+                <React19TradingForm symbol="AAPL" currentPrice={175.43} />
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Advanced Trading Chart - Full Width */}
         <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
