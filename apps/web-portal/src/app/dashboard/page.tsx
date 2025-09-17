@@ -48,57 +48,57 @@ export default function DashboardPage() {
     return (
       <DashboardLayout>
         <div className="space-y-8">
-          {/* Clean Skeleton Header */}
+          {/* Modern Skeleton Header */}
           <div className="space-y-4">
-            <div className="skeleton-professional h-12 w-96 rounded-lg"></div>
-            <div className="skeleton-professional h-6 w-80 rounded-lg"></div>
+            <div className="skeleton-modern h-12 w-96 rounded-xl animate-fade-in"></div>
+            <div className="skeleton-modern h-6 w-80 rounded-xl animate-fade-in" style={{ animationDelay: '0.1s' }}></div>
           </div>
 
-          {/* Clean Skeleton Stats */}
+          {/* Modern Skeleton Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="skeleton-card card-spacing">
+              <div key={i} className="skeleton-card card-spacing animate-slide-up" style={{ animationDelay: `${i * 0.1}s` }}>
                 <div className="flex items-center gap-4">
-                  <div className="skeleton-professional h-12 w-12 rounded-lg"></div>
+                  <div className="skeleton-modern h-12 w-12 rounded-xl"></div>
                   <div className="space-y-2">
-                    <div className="skeleton-professional h-4 w-20 rounded"></div>
-                    <div className="skeleton-professional h-6 w-16 rounded"></div>
+                    <div className="skeleton-modern h-4 w-20 rounded-lg"></div>
+                    <div className="skeleton-modern h-6 w-16 rounded-lg"></div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Clean Skeleton Grid */}
+          {/* Modern Skeleton Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
-              <div className="skeleton-card card-spacing">
+              <div className="skeleton-card card-spacing animate-slide-up" style={{ animationDelay: '0.5s' }}>
                 <div className="space-y-4">
-                  <div className="skeleton-professional h-6 w-48 rounded"></div>
-                  <div className="skeleton-professional h-4 w-full rounded"></div>
-                  <div className="skeleton-professional h-4 w-3/4 rounded"></div>
+                  <div className="skeleton-modern h-6 w-48 rounded-lg"></div>
+                  <div className="skeleton-modern h-4 w-full rounded-lg"></div>
+                  <div className="skeleton-modern h-4 w-3/4 rounded-lg"></div>
                 </div>
               </div>
-              <div className="skeleton-card card-spacing">
+              <div className="skeleton-card card-spacing animate-slide-up" style={{ animationDelay: '0.6s' }}>
                 <div className="space-y-4">
-                  <div className="skeleton-professional h-6 w-40 rounded"></div>
-                  <div className="skeleton-professional h-32 w-full rounded"></div>
+                  <div className="skeleton-modern h-6 w-40 rounded-lg"></div>
+                  <div className="skeleton-modern h-32 w-full rounded-xl"></div>
                 </div>
               </div>
             </div>
             <div className="space-y-8">
-              <div className="skeleton-card card-spacing">
+              <div className="skeleton-card card-spacing animate-slide-up" style={{ animationDelay: '0.7s' }}>
                 <div className="space-y-3">
-                  <div className="skeleton-professional h-5 w-32 rounded"></div>
-                  <div className="skeleton-professional h-4 w-full rounded"></div>
-                  <div className="skeleton-professional h-4 w-5/6 rounded"></div>
+                  <div className="skeleton-modern h-5 w-32 rounded-lg"></div>
+                  <div className="skeleton-modern h-4 w-full rounded-lg"></div>
+                  <div className="skeleton-modern h-4 w-5/6 rounded-lg"></div>
                 </div>
               </div>
-              <div className="skeleton-card card-spacing">
+              <div className="skeleton-card card-spacing animate-slide-up" style={{ animationDelay: '0.8s' }}>
                 <div className="space-y-3">
-                  <div className="skeleton-professional h-5 w-28 rounded"></div>
-                  <div className="skeleton-professional h-4 w-full rounded"></div>
-                  <div className="skeleton-professional h-4 w-4/5 rounded"></div>
+                  <div className="skeleton-modern h-5 w-28 rounded-lg"></div>
+                  <div className="skeleton-modern h-4 w-full rounded-lg"></div>
+                  <div className="skeleton-modern h-4 w-4/5 rounded-lg"></div>
                 </div>
               </div>
             </div>
@@ -133,14 +133,14 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" className="gap-2">
+              <button className="btn-glass gap-2 text-sm">
                 <RefreshCw className="h-4 w-4" />
                 Refresh
-              </Button>
-              <Button variant="outline" size="sm" className="gap-2">
+              </button>
+              <button className="btn-modern gap-2 text-sm">
                 <Bell className="h-4 w-4" />
                 Alerts
-              </Button>
+              </button>
             </div>
           </motion.div>
 
@@ -151,19 +151,20 @@ export default function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <Card className="border-success/20 bg-success/5">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-success mt-0.5" />
-                    <div>
-                      <h3 className="font-semibold text-success mb-1">Portfolio Performing Well</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Your portfolio is up 2.34% today. All systems are operational and your data is up to date.
-                      </p>
-                    </div>
+              <div className="card-gradient p-6 animate-bounce-in">
+                <div className="flex items-start gap-3">
+                  <div className="status-indicator status-online">
+                    <CheckCircle className="h-4 w-4" />
+                    Live
                   </div>
-                </CardContent>
-              </Card>
+                  <div>
+                    <h3 className="font-semibold text-white mb-1">Portfolio Performing Well</h3>
+                    <p className="text-sm text-white/80">
+                      Your portfolio is up 2.34% today. All systems are operational and your data is up to date.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           )}
 
@@ -174,77 +175,69 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            <Card className="card-professional hover-lift">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Portfolio Value</p>
-                    <p className="text-2xl font-bold text-foreground">$125,430</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <ArrowUpRight className="h-4 w-4 text-success" />
-                      <span className="text-sm font-medium text-success">+2.34%</span>
-                    </div>
-                  </div>
-                  <div className="p-3 bg-success/10 rounded-xl">
-                    <TrendingUp className="h-6 w-6 text-success" />
+            <div className="card-modern p-6 animate-bounce-in" style={{ animationDelay: '0.1s' }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Portfolio Value</p>
+                  <p className="text-2xl font-bold text-foreground">$125,430</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <ArrowUpRight className="h-4 w-4 text-success" />
+                    <span className="text-sm font-medium text-success">+2.34%</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="p-3 bg-gradient-to-br from-success/20 to-success/10 rounded-xl">
+                  <TrendingUp className="h-6 w-6 text-success" />
+                </div>
+              </div>
+            </div>
 
-            <Card className="card-professional hover-lift">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Today's P&L</p>
-                    <p className="text-2xl font-bold text-success">+$2,340</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <ArrowUpRight className="h-4 w-4 text-success" />
-                      <span className="text-sm font-medium text-success">+1.89%</span>
-                    </div>
-                  </div>
-                  <div className="p-3 bg-primary/10 rounded-xl">
-                    <BarChart3 className="h-6 w-6 text-primary" />
+            <div className="card-premium p-6 animate-bounce-in" style={{ animationDelay: '0.2s' }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Today's P&L</p>
+                  <p className="text-2xl font-bold text-success">+$2,340</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <ArrowUpRight className="h-4 w-4 text-success" />
+                    <span className="text-sm font-medium text-success">+1.89%</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl">
+                  <BarChart3 className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+            </div>
 
-            <Card className="card-professional hover-lift">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Active Positions</p>
-                    <p className="text-2xl font-bold text-foreground">12</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Target className="h-4 w-4 text-info" />
-                      <span className="text-sm font-medium text-info">3 new today</span>
-                    </div>
-                  </div>
-                  <div className="p-3 bg-warning/10 rounded-xl">
-                    <Activity className="h-6 w-6 text-warning" />
+            <div className="card-glass p-6 animate-bounce-in" style={{ animationDelay: '0.3s' }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Active Positions</p>
+                  <p className="text-2xl font-bold text-foreground">12</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Target className="h-4 w-4 text-info" />
+                    <span className="text-sm font-medium text-info">3 new today</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="p-3 bg-gradient-to-br from-warning/20 to-warning/10 rounded-xl">
+                  <Activity className="h-6 w-6 text-warning" />
+                </div>
+              </div>
+            </div>
 
-            <Card className="card-professional hover-lift">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Risk Score</p>
-                    <p className="text-2xl font-bold text-success">Low</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Shield className="h-4 w-4 text-success" />
-                      <span className="text-sm font-medium text-success">Well balanced</span>
-                    </div>
-                  </div>
-                  <div className="p-3 bg-success/10 rounded-xl">
-                    <Shield className="h-6 w-6 text-success" />
+            <div className="card-modern p-6 animate-bounce-in" style={{ animationDelay: '0.4s' }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Risk Score</p>
+                  <p className="text-2xl font-bold text-success">Low</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Shield className="h-4 w-4 text-success" />
+                    <span className="text-sm font-medium text-success">Well balanced</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="p-3 bg-gradient-to-br from-success/20 to-success/10 rounded-xl">
+                  <Shield className="h-6 w-6 text-success" />
+                </div>
+              </div>
+            </div>
           </motion.div>
 
           {/* Main Content Grid */}
