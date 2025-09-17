@@ -215,6 +215,8 @@ const availableThemes: Theme[] = [
 
 // Apply theme to CSS variables
 const applyThemeToCSS = (theme: Theme) => {
+  if (typeof window === 'undefined') return;
+  
   const root = document.documentElement;
 
   // Apply primary color (use primary-500 as main primary)

@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { ReactNode, ComponentProps } from 'react';
 
-interface EnhancedCardProps extends ComponentProps<typeof Card> {
+interface EnhancedCardProps extends Omit<ComponentProps<typeof Card>, 'variant'> {
   variant?: 'default' | 'glass' | 'glass-strong' | 'gradient' | 'premium' | 'elevated';
   animationType?: 'fade-in' | 'slide-up' | 'scale-in' | 'bounce-subtle' | 'none';
   glowColor?: 'blue' | 'green' | 'purple' | 'red' | 'yellow';

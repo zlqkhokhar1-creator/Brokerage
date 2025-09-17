@@ -31,7 +31,7 @@ export function PositionSizingCalculator({ symbol, currentPrice }: PositionSizin
   const [stopLoss, setStopLoss] = useState(currentPrice * 0.95);
   const [takeProfit, setTakeProfit] = useState(currentPrice * 1.10);
   const [riskPerTrade, setRiskPerTrade] = useState(1);
-  const [calculationMethod, setCalculationMethod] = useState<'percentage' | 'fixed');
+  const [calculationMethod, setCalculationMethod] = useState<'percentage' | 'fixed'>('percentage');
   const [result, setResult] = useState<PositionSizingResult | null>(null);
 
   useEffect(() => {

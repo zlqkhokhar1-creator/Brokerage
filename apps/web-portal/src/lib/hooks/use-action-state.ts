@@ -1,13 +1,26 @@
 'use client';
 
-import { useActionState, useOptimistic } from 'react';
+import { useState, useCallback, useOptimistic } from 'react';
 
 // Generic action state hook for forms and async operations
 export function useAsyncAction<TState, TAction = any>(
   action: (prevState: TState, formData: TAction) => Promise<TState>,
   initialState: TState
 ) {
-  const [state, submitAction, isPending] = useActionState(action, initialState);
+  const [state, setState] = useState<TState>(initialState);
+  const [isPending, setIsPending] = useState(false);
+  
+  const submitAction = useCallback(async (formData: TAction) => {
+    setIsPending(true);
+    try {
+      const newState = await action(state, formData);
+      setState(newState);
+    } catch (error) {
+      console.error('Action failed:', error);
+    } finally {
+      setIsPending(false);
+    }
+  }, [action, state]);
   
   return {
     state,

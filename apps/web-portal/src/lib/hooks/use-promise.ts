@@ -1,6 +1,6 @@
 'use client';
 
-import { use, Suspense } from 'react';
+import { use, Suspense, type ComponentType } from 'react';
 
 // React 19 use() hook for promises
 export function usePromise<T>(promise: Promise<T>): T {
@@ -46,9 +46,6 @@ export function TradingDataProvider({
   children: React.ReactNode; 
   fallback: React.ReactNode; 
 }) {
-  return (
-    <Suspense fallback={fallback}>
-      {children}
-    </Suspense>
-  );
+  // For now, just return children without Suspense to avoid React 19 compatibility issues
+  return children as React.ReactElement;
 }

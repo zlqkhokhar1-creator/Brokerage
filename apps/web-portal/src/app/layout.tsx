@@ -1,25 +1,27 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { MantineProvider, createTheme } from '@mantine/core'
+import { ThemeProvider } from '@/components/theme-provider'
+import { ThemeInitializer } from '@/components/theme-initializer'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
 
 // Dynamic theme that uses CSS variables
 const theme = createTheme({
-  primaryColor: 'dark',
+  primaryColor: 'blue',
   colors: {
-    dark: [
-      'hsl(var(--muted-foreground))',
-      'hsl(var(--muted-foreground))',
-      'hsl(var(--muted-foreground))',
-      'hsl(var(--muted-foreground))',
-      'hsl(var(--border))',
-      'hsl(var(--border))',
-      'hsl(var(--card))',
-      'hsl(var(--card))',
-      'hsl(var(--card))',
-      'hsl(var(--background))',
+    blue: [
+      'hsl(var(--primary))',
+      'hsl(var(--primary))',
+      'hsl(var(--primary))',
+      'hsl(var(--primary))',
+      'hsl(var(--primary))',
+      'hsl(var(--primary))',
+      'hsl(var(--primary))',
+      'hsl(var(--primary))',
+      'hsl(var(--primary))',
+      'hsl(var(--primary))',
     ],
     green: [
       'hsl(var(--success))',
@@ -34,39 +36,36 @@ const theme = createTheme({
       'hsl(var(--success))',
     ],
     red: [
-      'hsl(var(--error))',
-      'hsl(var(--error))',
-      'hsl(var(--error))',
-      'hsl(var(--error))',
-      'hsl(var(--error))',
-      'hsl(var(--error))',
-      'hsl(var(--error))',
-      'hsl(var(--error))',
-      'hsl(var(--error))',
-      'hsl(var(--error))',
+      'hsl(var(--destructive))',
+      'hsl(var(--destructive))',
+      'hsl(var(--destructive))',
+      'hsl(var(--destructive))',
+      'hsl(var(--destructive))',
+      'hsl(var(--destructive))',
+      'hsl(var(--destructive))',
+      'hsl(var(--destructive))',
+      'hsl(var(--destructive))',
+      'hsl(var(--destructive))',
     ],
   },
   fontFamily: 'Inter, sans-serif',
   defaultRadius: 'md',
   components: {
-    Table: {
-      styles: {
-        root: {
-          backgroundColor: 'hsl(var(--card))',
-        },
-        tr: {
-          backgroundColor: 'hsl(var(--card))',
-          '&:hover': {
-            backgroundColor: 'hsl(var(--muted))',
-          },
-        },
-      },
-    },
     Card: {
       styles: {
         root: {
           backgroundColor: 'hsl(var(--card))',
           border: '1px solid hsl(var(--border))',
+          color: 'hsl(var(--card-foreground))',
+        },
+      },
+    },
+    Button: {
+      styles: {
+        root: {
+          backgroundColor: 'hsl(var(--primary))',
+          color: 'hsl(var(--primary-foreground))',
+          border: '1px solid hsl(var(--primary))',
         },
       },
     },
@@ -84,11 +83,19 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} bg-background text-foreground`}>
-        <MantineProvider theme={theme} defaultColorScheme="dark">
-          {children}
-        </MantineProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          disableTransitionOnChange={false}
+        >
+          <ThemeInitializer />
+          <MantineProvider theme={theme}>
+            {children}
+          </MantineProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

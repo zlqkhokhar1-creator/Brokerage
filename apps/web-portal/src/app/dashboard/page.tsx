@@ -2,27 +2,37 @@
 
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { MarketOverview } from '@/components/dashboard/market-overview';
-import { PortfolioSummary } from '@/components/dashboard/portfolio-summary';
-import { NewsFeed } from '@/components/dashboard/news-feed';
-import { WatchlistPanel } from '@/components/dashboard/watchlist-panel';
-import { Card, Text, Group, Badge, SimpleGrid, Alert, Select, Button } from '@mantine/core';
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, Users, Activity, Crown, Zap, Star, Shield, CheckCircle, Settings } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  BarChart3, 
+  Users, 
+  Activity, 
+  Crown, 
+  Zap, 
+  Star, 
+  Shield, 
+  CheckCircle, 
+  Settings,
+  ArrowUpRight,
+  ArrowDownRight,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  Bell,
+  Target,
+  PieChart
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [selectedSymbol, setSelectedSymbol] = useState('AAPL');
-  const [activeIndicators, setActiveIndicators] = useState(['sma', 'rsi']);
-
-  const toggleIndicator = (indicator: string) => {
-    setActiveIndicators(prev =>
-      prev.includes(indicator)
-        ? prev.filter(i => i !== indicator)
-        : [...prev, indicator]
-    );
-  };
+  const [portfolioVisible, setPortfolioVisible] = useState(true);
 
   useEffect(() => {
     // Simulate loading
@@ -37,22 +47,22 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="content-spacing section-spacing">
+        <div className="space-y-8">
           {/* Clean Skeleton Header */}
           <div className="space-y-4">
-            <div className="skeleton-text h-12 w-96"></div>
-            <div className="skeleton-text h-6 w-80"></div>
+            <div className="skeleton-professional h-12 w-96 rounded-lg"></div>
+            <div className="skeleton-professional h-6 w-80 rounded-lg"></div>
           </div>
 
           {/* Clean Skeleton Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="skeleton-card card-spacing">
                 <div className="flex items-center gap-4">
-                  <div className="skeleton-text h-12 w-12 rounded-lg"></div>
+                  <div className="skeleton-professional h-12 w-12 rounded-lg"></div>
                   <div className="space-y-2">
-                    <div className="skeleton-text h-4 w-20"></div>
-                    <div className="skeleton-text h-6 w-16"></div>
+                    <div className="skeleton-professional h-4 w-20 rounded"></div>
+                    <div className="skeleton-professional h-6 w-16 rounded"></div>
                   </div>
                 </div>
               </div>
@@ -64,31 +74,31 @@ export default function DashboardPage() {
             <div className="lg:col-span-2 space-y-8">
               <div className="skeleton-card card-spacing">
                 <div className="space-y-4">
-                  <div className="skeleton-text h-6 w-48"></div>
-                  <div className="skeleton-text h-4 w-full"></div>
-                  <div className="skeleton-text h-4 w-3/4"></div>
+                  <div className="skeleton-professional h-6 w-48 rounded"></div>
+                  <div className="skeleton-professional h-4 w-full rounded"></div>
+                  <div className="skeleton-professional h-4 w-3/4 rounded"></div>
                 </div>
               </div>
               <div className="skeleton-card card-spacing">
                 <div className="space-y-4">
-                  <div className="skeleton-text h-6 w-40"></div>
-                  <div className="skeleton-text h-32 w-full"></div>
+                  <div className="skeleton-professional h-6 w-40 rounded"></div>
+                  <div className="skeleton-professional h-32 w-full rounded"></div>
                 </div>
               </div>
             </div>
             <div className="space-y-8">
               <div className="skeleton-card card-spacing">
                 <div className="space-y-3">
-                  <div className="skeleton-text h-5 w-32"></div>
-                  <div className="skeleton-text h-4 w-full"></div>
-                  <div className="skeleton-text h-4 w-5/6"></div>
+                  <div className="skeleton-professional h-5 w-32 rounded"></div>
+                  <div className="skeleton-professional h-4 w-full rounded"></div>
+                  <div className="skeleton-professional h-4 w-5/6 rounded"></div>
                 </div>
               </div>
               <div className="skeleton-card card-spacing">
                 <div className="space-y-3">
-                  <div className="skeleton-text h-5 w-28"></div>
-                  <div className="skeleton-text h-4 w-full"></div>
-                  <div className="skeleton-text h-4 w-4/5"></div>
+                  <div className="skeleton-professional h-5 w-28 rounded"></div>
+                  <div className="skeleton-professional h-4 w-full rounded"></div>
+                  <div className="skeleton-professional h-4 w-4/5 rounded"></div>
                 </div>
               </div>
             </div>
@@ -100,26 +110,38 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="content-spacing section-spacing">
+      <div className="space-y-8">
         <motion.div
           className="space-y-8"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6 }}
         >
-          {/* Clean Page Header */}
+          {/* Professional Page Header */}
           <motion.div
-            className="text-center lg:text-left"
+            className="flex items-center justify-between"
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.1 }}
           >
-            <h1 className="text-heading-1 text-primary mb-3">
-              Invest Pro Dashboard
-            </h1>
-            <p className="text-body-large text-secondary max-w-2xl">
-              Welcome to Invest Pro. Here's your comprehensive financial overview with professional insights and real-time data.
-            </p>
+            <div>
+              <h1 className="text-heading-1 text-foreground mb-2">
+                Welcome back, John
+              </h1>
+              <p className="text-body-large text-muted-foreground">
+                Here's your comprehensive financial overview with real-time insights
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" size="sm" className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Bell className="h-4 w-4" />
+                Alerts
+              </Button>
+            </div>
           </motion.div>
 
           {/* Welcome Alert */}
@@ -129,82 +151,101 @@ export default function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <Alert
-                icon={<CheckCircle className="h-5 w-5" style={{ color: 'hsl(var(--success))' }} />}
-                title="Welcome Back!"
-                color="green"
-                variant="light"
-                className="card-clean"
-                styles={{
-                  root: {
-                    backgroundColor: 'hsl(var(--success) / 0.1)',
-                    borderColor: 'hsl(var(--success) / 0.2)',
-                    color: 'hsl(var(--foreground))'
-                  }
-                }}
-              >
-                Your portfolio is performing well today. All systems are operational and your data is up to date.
-              </Alert>
+              <Card className="border-success/20 bg-success/5">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-success mt-0.5" />
+                    <div>
+                      <h3 className="font-semibold text-success mb-1">Portfolio Performing Well</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Your portfolio is up 2.34% today. All systems are operational and your data is up to date.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
           )}
 
-          {/* Clean Stats Cards */}
+          {/* Professional Stats Cards */}
           <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="lg">
-              <Card className="card-clean hover-clean">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'hsl(var(--success) / 0.1)' }}>
-                    <TrendingUp className="h-6 w-6" style={{ color: 'hsl(var(--success))' }} />
-                  </div>
+            <Card className="card-professional hover-lift">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
                   <div>
-                    <Text size="sm" className="text-muted-foreground text-caption">Portfolio Value</Text>
-                    <Text size="xl" fw={700} style={{ color: 'hsl(var(--success))' }}>$125,430</Text>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Portfolio Value</p>
+                    <p className="text-2xl font-bold text-foreground">$125,430</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <ArrowUpRight className="h-4 w-4 text-success" />
+                      <span className="text-sm font-medium text-success">+2.34%</span>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-success/10 rounded-xl">
+                    <TrendingUp className="h-6 w-6 text-success" />
                   </div>
                 </div>
-              </Card>
+              </CardContent>
+            </Card>
 
-              <Card className="card-clean hover-clean">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'hsl(var(--primary) / 0.1)' }}>
-                    <BarChart3 className="h-6 w-6" style={{ color: 'hsl(var(--primary))' }} />
-                  </div>
+            <Card className="card-professional hover-lift">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
                   <div>
-                    <Text size="sm" className="text-muted-foreground text-caption">Today's P&L</Text>
-                    <Text size="xl" fw={700} style={{ color: 'hsl(var(--success))' }}>+$2,340</Text>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Today's P&L</p>
+                    <p className="text-2xl font-bold text-success">+$2,340</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <ArrowUpRight className="h-4 w-4 text-success" />
+                      <span className="text-sm font-medium text-success">+1.89%</span>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-primary/10 rounded-xl">
+                    <BarChart3 className="h-6 w-6 text-primary" />
                   </div>
                 </div>
-              </Card>
+              </CardContent>
+            </Card>
 
-              <Card className="card-clean hover-clean">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'hsl(var(--warning) / 0.1)' }}>
-                    <Zap className="h-6 w-6" style={{ color: 'hsl(var(--warning))' }} />
-                  </div>
+            <Card className="card-professional hover-lift">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
                   <div>
-                    <Text size="sm" className="text-muted-foreground text-caption">AI Signals</Text>
-                    <Text size="xl" fw={700} style={{ color: 'hsl(var(--warning))' }}>12 Active</Text>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Active Positions</p>
+                    <p className="text-2xl font-bold text-foreground">12</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Target className="h-4 w-4 text-info" />
+                      <span className="text-sm font-medium text-info">3 new today</span>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-warning/10 rounded-xl">
+                    <Activity className="h-6 w-6 text-warning" />
                   </div>
                 </div>
-              </Card>
+              </CardContent>
+            </Card>
 
-              <Card className="card-clean hover-clean">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'hsl(var(--muted))' }}>
-                    <Shield className="h-6 w-6" style={{ color: 'hsl(var(--muted-foreground))' }} />
-                  </div>
+            <Card className="card-professional hover-lift">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
                   <div>
-                    <Text size="sm" className="text-muted-foreground text-caption">Risk Score</Text>
-                    <Text size="xl" fw={700} style={{ color: 'hsl(var(--success))' }}>Low</Text>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Risk Score</p>
+                    <p className="text-2xl font-bold text-success">Low</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Shield className="h-4 w-4 text-success" />
+                      <span className="text-sm font-medium text-success">Well balanced</span>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-success/10 rounded-xl">
+                    <Shield className="h-6 w-6 text-success" />
                   </div>
                 </div>
-              </Card>
-            </SimpleGrid>
+              </CardContent>
+            </Card>
           </motion.div>
-
 
           {/* Main Content Grid */}
           <motion.div
@@ -213,62 +254,162 @@ export default function DashboardPage() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.6 }}
           >
-            {/* Left Column - Market Overview */}
-            <motion.div
-              className="lg:col-span-2 space-y-8"
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.7 }}
-            >
-              <MarketOverview />
-              <PortfolioSummary />
-            </motion.div>
+            {/* Left Column - Charts and Analysis */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Portfolio Performance Chart */}
+              <Card className="card-professional">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-xl">Portfolio Performance</CardTitle>
+                      <CardDescription>Track your investment growth over time</CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm">1M</Button>
+                      <Button variant="default" size="sm">3M</Button>
+                      <Button variant="outline" size="sm">1Y</Button>
+                      <Button variant="outline" size="sm">All</Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80 bg-muted/30 rounded-lg flex items-center justify-center">
+                    <div className="text-center">
+                      <BarChart3 className="h-16 w-16 mx-auto mb-4 text-primary/50" />
+                      <h3 className="text-lg font-semibold mb-2 text-foreground">
+                        Portfolio Performance Chart
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Interactive chart showing your portfolio's growth trajectory
+                      </p>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        <Badge variant="secondary">Portfolio Value</Badge>
+                        <Badge variant="secondary">S&P 500 Benchmark</Badge>
+                        <Badge variant="secondary">Risk Metrics</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recent Activity */}
+              <Card className="card-professional">
+                <CardHeader>
+                  <CardTitle className="text-xl">Recent Activity</CardTitle>
+                  <CardDescription>Your latest trades and market updates</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      { action: 'Bought', symbol: 'AAPL', shares: 50, price: 175.43, time: '2 min ago', type: 'buy' },
+                      { action: 'Sold', symbol: 'TSLA', shares: 25, price: 245.67, time: '1 hour ago', type: 'sell' },
+                      { action: 'Dividend', symbol: 'MSFT', amount: 45.50, time: '3 hours ago', type: 'dividend' },
+                      { action: 'Bought', symbol: 'NVDA', shares: 15, price: 432.12, time: '5 hours ago', type: 'buy' },
+                    ].map((activity, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full ${
+                            activity.type === 'buy' ? 'bg-success' : 
+                            activity.type === 'sell' ? 'bg-destructive' : 'bg-info'
+                          }`} />
+                          <div>
+                            <p className="font-medium text-foreground">
+                              {activity.action} {activity.symbol}
+                              {activity.shares && ` (${activity.shares} shares)`}
+                            </p>
+                            <p className="text-sm text-muted-foreground">{activity.time}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-foreground">
+                            {activity.price ? `$${activity.price}` : `$${activity.amount}`}
+                          </p>
+                          <Badge variant={activity.type === 'buy' ? 'success' : activity.type === 'sell' ? 'destructive' : 'info'} size="sm">
+                            {activity.type}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
             {/* Right Column - Sidebar Widgets */}
-            <motion.div
-              className="space-y-8"
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-            >
-              <WatchlistPanel />
-              <NewsFeed />
-
-              {/* Clean Premium Feature Card */}
-              <Card className="card-elevated">
-                <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg mb-4" style={{ backgroundColor: 'hsl(var(--warning) / 0.1)' }}>
-                    <Crown className="h-6 w-6" style={{ color: 'hsl(var(--warning))' }} />
-                  </div>
-                  <Text size="sm" fw={600} className="text-primary" mb="xs">Premium Features</Text>
-                  <Text size="xs" className="text-muted-foreground" mb="md">
-                    Unlock AI insights, advanced analytics, and priority support
-                  </Text>
-                  <button className="w-full px-4 py-2 rounded-lg font-medium text-white transition-all duration-200 hover:shadow-md" style={{ backgroundColor: 'hsl(var(--primary))', borderColor: 'hsl(var(--primary))' }}>
-                    Upgrade Now
-                  </button>
-                </div>
+            <div className="space-y-8">
+              {/* Quick Actions */}
+              <Card className="card-professional">
+                <CardHeader>
+                  <CardTitle className="text-lg">Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button className="w-full justify-start gap-3" size="lg">
+                    <Activity className="h-5 w-5" />
+                    Place Trade
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start gap-3" size="lg">
+                    <PieChart className="h-5 w-5" />
+                    View Portfolio
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start gap-3" size="lg">
+                    <BarChart3 className="h-5 w-5" />
+                    Market Analysis
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start gap-3" size="lg">
+                    <Target className="h-5 w-5" />
+                    Set Alerts
+                  </Button>
+                </CardContent>
               </Card>
-            </motion.div>
-          </motion.div>
 
-          {/* Clean Floating Action Button */}
-          <motion.div
-            className="fixed bottom-6 right-6 z-50"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.5, delay: 1.0, type: "spring" }}
-          >
-            <button
-              className="px-6 py-3 rounded-lg font-medium text-white shadow-soft hover-lift transition-all duration-200"
-              style={{
-                backgroundColor: 'hsl(var(--primary))',
-                borderColor: 'hsl(var(--primary))'
-              }}
-            >
-              <Zap className="h-5 w-5 mr-2" />
-              Quick Trade
-            </button>
+              {/* Top Movers */}
+              <Card className="card-professional">
+                <CardHeader>
+                  <CardTitle className="text-lg">Top Movers</CardTitle>
+                  <CardDescription>Today's biggest winners and losers</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[
+                      { symbol: 'NVDA', name: 'NVIDIA Corp.', price: 432.12, change: '+8.45%', positive: true },
+                      { symbol: 'TSLA', name: 'Tesla Inc.', price: 245.67, change: '+5.23%', positive: true },
+                      { symbol: 'AAPL', name: 'Apple Inc.', price: 175.43, change: '+3.45%', positive: true },
+                      { symbol: 'META', name: 'Meta Platforms', price: 345.67, change: '-4.23%', positive: false },
+                    ].map((stock, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 hover:bg-muted/50 rounded-lg transition-colors">
+                        <div>
+                          <p className="font-medium text-foreground">{stock.symbol}</p>
+                          <p className="text-sm text-muted-foreground">{stock.name}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-foreground">${stock.price}</p>
+                          <p className={`text-sm font-medium ${stock.positive ? 'text-success' : 'text-destructive'}`}>
+                            {stock.change}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Premium Features */}
+              <Card className="card-elevated bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                <CardContent className="p-6 text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 mb-4">
+                    <Crown className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="font-semibold text-foreground mb-2">Upgrade to Premium</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Unlock AI insights, advanced analytics, and priority support
+                  </p>
+                  <Button className="w-full">
+                    <Zap className="h-4 w-4 mr-2" />
+                    Upgrade Now
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </motion.div>
         </motion.div>
       </div>

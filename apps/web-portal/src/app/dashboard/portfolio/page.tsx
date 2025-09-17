@@ -1,8 +1,35 @@
 'use client';
 
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { Card, Text, Group, Badge, Progress, SimpleGrid, Tabs, Button } from '@mantine/core';
-import { TrendingUp, TrendingDown, DollarSign, PieChart, Target, Calendar } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  PieChart, 
+  Target, 
+  Calendar,
+  ArrowUpRight,
+  ArrowDownRight,
+  BarChart3,
+  Activity,
+  Shield,
+  Clock,
+  RefreshCw,
+  Download,
+  Settings,
+  Eye,
+  EyeOff,
+  Plus,
+  Minus,
+  Star,
+  AlertCircle,
+  CheckCircle,
+  Info
+} from 'lucide-react';
+import { useState } from 'react';
 
 const portfolioData = {
   totalValue: 125430.50,
@@ -10,264 +37,467 @@ const portfolioData = {
   dayChangePercent: 2.56,
   totalReturn: 15430.50,
   totalReturnPercent: 14.02,
+  cashBalance: 15420.30,
+  buyingPower: 30840.60,
   holdings: [
-    { symbol: 'AAPL', name: 'Apple Inc.', shares: 50, avgPrice: 150.00, currentPrice: 175.43, value: 8771.50, change: 16.95 },
-    { symbol: 'MSFT', name: 'Microsoft Corp.', shares: 30, avgPrice: 280.00, currentPrice: 335.89, value: 10076.70, change: 19.96 },
-    { symbol: 'TSLA', name: 'Tesla Inc.', shares: 25, avgPrice: 200.00, currentPrice: 245.67, value: 6141.75, change: 22.84 },
-    { symbol: 'NVDA', name: 'NVIDIA Corp.', shares: 15, avgPrice: 350.00, currentPrice: 432.12, value: 6481.80, change: 23.49 },
+    { 
+      symbol: 'AAPL', 
+      name: 'Apple Inc.', 
+      shares: 50, 
+      avgPrice: 150.00, 
+      currentPrice: 175.43, 
+      value: 8771.50, 
+      pnl: 1271.50, 
+      pnlPercent: 16.95,
+      weight: 6.99,
+      positive: true
+    },
+    { 
+      symbol: 'MSFT', 
+      name: 'Microsoft Corp.', 
+      shares: 30, 
+      avgPrice: 280.00, 
+      currentPrice: 335.89, 
+      value: 10076.70, 
+      pnl: 1676.70, 
+      pnlPercent: 19.96,
+      weight: 8.03,
+      positive: true
+    },
+    { 
+      symbol: 'TSLA', 
+      name: 'Tesla Inc.', 
+      shares: 25, 
+      avgPrice: 200.00, 
+      currentPrice: 245.67, 
+      value: 6141.75, 
+      pnl: 1141.75, 
+      pnlPercent: 22.84,
+      weight: 4.90,
+      positive: true
+    },
+    { 
+      symbol: 'NVDA', 
+      name: 'NVIDIA Corp.', 
+      shares: 15, 
+      avgPrice: 350.00, 
+      currentPrice: 432.12, 
+      value: 6481.80, 
+      pnl: 1231.80, 
+      pnlPercent: 23.49,
+      weight: 5.17,
+      positive: true
+    },
   ]
 };
 
 const allocationData = [
-  { sector: 'Technology', percentage: 65, value: 81547.75, color: '#00ff00' },
-  { sector: 'Healthcare', percentage: 20, value: 25086.10, color: '#0080ff' },
-  { sector: 'Financials', percentage: 10, value: 12543.05, color: '#ff8000' },
-  { sector: 'Energy', percentage: 5, value: 6271.53, color: '#8000ff' },
+  { sector: 'Technology', percentage: 65, value: 81547.75, color: 'bg-primary', positive: true },
+  { sector: 'Healthcare', percentage: 20, value: 25086.10, color: 'bg-success', positive: true },
+  { sector: 'Financials', percentage: 10, value: 12543.05, color: 'bg-warning', positive: false },
+  { sector: 'Energy', percentage: 5, value: 6271.53, color: 'bg-info', positive: true },
+];
+
+const performanceMetrics = [
+  { label: 'Sharpe Ratio', value: '1.45', description: 'Risk-adjusted returns', positive: true },
+  { label: 'Max Drawdown', value: '-8.23%', description: 'Peak to trough decline', positive: false },
+  { label: 'Volatility', value: '12.45%', description: 'Annualized standard deviation', positive: true },
+  { label: 'Beta', value: '0.87', description: 'Market correlation', positive: true },
+  { label: 'Alpha', value: '2.34%', description: 'Excess return over benchmark', positive: true },
+  { label: 'Sortino Ratio', value: '1.89', description: 'Downside risk-adjusted return', positive: true },
 ];
 
 export default function PortfolioPage() {
-  const isPositive = portfolioData.dayChange >= 0;
+  const [activeTab, setActiveTab] = useState('overview');
+  const [portfolioVisible, setPortfolioVisible] = useState(true);
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: PieChart },
+    { id: 'holdings', label: 'Holdings', icon: BarChart3 },
+    { id: 'performance', label: 'Performance', icon: TrendingUp },
+    { id: 'allocation', label: 'Allocation', icon: Target },
+  ];
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Page Header */}
+        {/* Professional Page Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white">Invest Pro Portfolio</h1>
-            <p className="text-gray-400 mt-1">Manage your investments and track performance on Invest Pro</p>
+            <h1 className="text-heading-1 text-foreground mb-2">Portfolio Management</h1>
+            <p className="text-body-large text-muted-foreground">
+              Track your investments and analyze performance with professional tools
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Settings className="h-4 w-4" />
+              Settings
+            </Button>
           </div>
         </div>
 
-        {/* Portfolio Overview */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Total Value Card */}
-          <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
-            <Group justify="space-between" mb="xs">
-              <Text size="sm" c="dimmed">Total Portfolio Value</Text>
-              <DollarSign className="h-5 w-5 text-green-400" />
-            </Group>
-            <Text size="3xl" fw={700} c="white">
-              ${portfolioData.totalValue.toLocaleString()}
-            </Text>
-            <Group gap="xs" mt="sm">
-              <Text
-                size="lg"
-                c={isPositive ? 'green' : 'red'}
-                fw={600}
-              >
-                {isPositive ? '+' : ''}${portfolioData.dayChange.toLocaleString()}
-              </Text>
-              <Text
-                size="lg"
-                c={isPositive ? 'green' : 'red'}
-                fw={600}
-              >
-                ({isPositive ? '+' : ''}{portfolioData.dayChangePercent}%)
-              </Text>
-            </Group>
+        {/* Portfolio Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="card-professional hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Total Portfolio Value</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    ${portfolioData.totalValue.toLocaleString()}
+                  </p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <ArrowUpRight className="h-4 w-4 text-success" />
+                    <span className="text-sm font-medium text-success">
+                      +${portfolioData.dayChange.toLocaleString()} ({portfolioData.dayChangePercent}%)
+                    </span>
+                  </div>
+                </div>
+                <div className="p-3 bg-success/10 rounded-xl">
+                  <DollarSign className="h-6 w-6 text-success" />
+                </div>
+              </div>
+            </CardContent>
           </Card>
 
-          {/* Total Return Card */}
-          <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
-            <Group justify="space-between" mb="xs">
-              <Text size="sm" c="dimmed">Total Return</Text>
-              <TrendingUp className="h-5 w-5 text-green-400" />
-            </Group>
-            <Text size="3xl" fw={700} c="green">
-              +${portfolioData.totalReturn.toLocaleString()}
-            </Text>
-            <Text size="lg" c="green" fw={600}>
-              +{portfolioData.totalReturnPercent}%
-            </Text>
+          <Card className="card-professional hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Total Return</p>
+                  <p className="text-2xl font-bold text-success">
+                    +${portfolioData.totalReturn.toLocaleString()}
+                  </p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <ArrowUpRight className="h-4 w-4 text-success" />
+                    <span className="text-sm font-medium text-success">
+                      +{portfolioData.totalReturnPercent}%
+                    </span>
+                  </div>
+                </div>
+                <div className="p-3 bg-primary/10 rounded-xl">
+                  <TrendingUp className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+            </CardContent>
           </Card>
 
-          {/* Holdings Count Card */}
-          <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
-            <Group justify="space-between" mb="xs">
-              <Text size="sm" c="dimmed">Holdings</Text>
-              <PieChart className="h-5 w-5 text-blue-400" />
-            </Group>
-            <Text size="3xl" fw={700} c="white">
-              {portfolioData.holdings.length}
-            </Text>
-            <Text size="lg" c="dimmed">
-              Active Positions
-            </Text>
+          <Card className="card-professional hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Cash Balance</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    ${portfolioData.cashBalance.toLocaleString()}
+                  </p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Clock className="h-4 w-4 text-info" />
+                    <span className="text-sm font-medium text-info">
+                      Available for trading
+                    </span>
+                  </div>
+                </div>
+                <div className="p-3 bg-info/10 rounded-xl">
+                  <Shield className="h-6 w-6 text-info" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="card-professional hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Buying Power</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    ${portfolioData.buyingPower.toLocaleString()}
+                  </p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Activity className="h-4 w-4 text-warning" />
+                    <span className="text-sm font-medium text-warning">
+                      With margin
+                    </span>
+                  </div>
+                </div>
+                <div className="p-3 bg-warning/10 rounded-xl">
+                  <Target className="h-6 w-6 text-warning" />
+                </div>
+              </div>
+            </CardContent>
           </Card>
         </div>
 
-        {/* Detailed Portfolio */}
-        <Tabs defaultValue="holdings" keepMounted={false}>
-          <Tabs.List>
-            <Tabs.Tab value="holdings">Holdings</Tabs.Tab>
-            <Tabs.Tab value="allocation">Allocation</Tabs.Tab>
-            <Tabs.Tab value="performance">Performance</Tabs.Tab>
-          </Tabs.List>
+        {/* Professional Tab Navigation */}
+        <div className="flex space-x-1 bg-muted/30 p-1 rounded-lg">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  activeTab === tab.id
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
 
-          <Tabs.Panel value="holdings" pt="xl">
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Portfolio Performance Chart */}
+            <div className="lg:col-span-2">
+              <Card className="card-professional">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-xl">Portfolio Performance</CardTitle>
+                      <CardDescription>Track your investment growth over time</CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm">1M</Button>
+                      <Button variant="default" size="sm">3M</Button>
+                      <Button variant="outline" size="sm">1Y</Button>
+                      <Button variant="outline" size="sm">5Y</Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80 bg-muted/30 rounded-lg flex items-center justify-center">
+                    <div className="text-center">
+                      <BarChart3 className="h-16 w-16 mx-auto mb-4 text-primary/50" />
+                      <h3 className="text-lg font-semibold mb-2 text-foreground">
+                        Portfolio Performance Chart
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Interactive chart showing your portfolio's growth trajectory with benchmark comparison
+                      </p>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        <Badge variant="secondary">Portfolio Value</Badge>
+                        <Badge variant="secondary">S&P 500 Benchmark</Badge>
+                        <Badge variant="secondary">Risk Metrics</Badge>
+                        <Badge variant="secondary">Dividend Yield</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="space-y-6">
+              <Card className="card-professional">
+                <CardHeader>
+                  <CardTitle className="text-lg">Quick Stats</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Holdings</span>
+                    <span className="font-semibold text-foreground">{portfolioData.holdings.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Avg. Return</span>
+                    <span className="font-semibold text-success">+{portfolioData.totalReturnPercent}%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Best Performer</span>
+                    <span className="font-semibold text-success">NVDA (+23.49%)</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Risk Level</span>
+                    <Badge variant="success" size="sm">Low</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="card-professional">
+                <CardHeader>
+                  <CardTitle className="text-lg">Recent Activity</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {[
+                    { action: 'Bought', symbol: 'AAPL', shares: 50, time: '2 hours ago', positive: true },
+                    { action: 'Dividend', symbol: 'MSFT', amount: 45.50, time: '1 day ago', positive: true },
+                    { action: 'Sold', symbol: 'TSLA', shares: 10, time: '2 days ago', positive: false },
+                  ].map((activity, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${activity.positive ? 'bg-success' : 'bg-destructive'}`} />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            {activity.action} {activity.symbol}
+                            {activity.shares && ` (${activity.shares} shares)`}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{activity.time}</p>
+                        </div>
+                      </div>
+                      {activity.amount && (
+                        <span className="text-sm font-medium text-success">+${activity.amount}</span>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Holdings Tab */}
+        {activeTab === 'holdings' && (
+          <Card className="card-professional">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">Portfolio Holdings</CardTitle>
+                  <CardDescription>Detailed view of all your investments</CardDescription>
+                </div>
+                <Badge variant="secondary" className="gap-1">
+                  <PieChart className="h-3 w-3" />
+                  {portfolioData.holdings.length} positions
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-4">
-                {portfolioData.holdings.map((holding) => (
+                {portfolioData.holdings.map((holding, index) => (
                   <div
-                    key={holding.symbol}
-                    className="flex items-center justify-between p-4 border border-gray-700 rounded hover:bg-gray-700 transition-colors"
+                    key={index}
+                    className="flex items-center justify-between p-6 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gray-600 rounded flex items-center justify-center">
-                        <span className="text-white font-bold">{holding.symbol.slice(0, 2)}</span>
+                      <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center">
+                        <span className="font-bold text-lg">{holding.symbol.slice(0, 2)}</span>
                       </div>
                       <div>
-                        <Text size="sm" fw={600} c="white">{holding.symbol}</Text>
-                        <Text size="xs" c="dimmed">{holding.name}</Text>
-                        <Text size="xs" c="dimmed">{holding.shares} shares @ ${holding.avgPrice}</Text>
+                        <p className="font-semibold text-foreground text-lg">{holding.symbol}</p>
+                        <p className="text-sm text-muted-foreground">{holding.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {holding.shares} shares • Avg: ${holding.avgPrice} • Weight: {holding.weight}%
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <Text size="sm" fw={500} c="white">${holding.currentPrice}</Text>
-                      <Text size="xs" c={holding.change >= 0 ? 'green' : 'red'}>
-                        {holding.change >= 0 ? '+' : ''}{holding.change}%
-                      </Text>
-                      <Text size="sm" fw={600} c="white">${holding.value.toLocaleString()}</Text>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </Tabs.Panel>
-
-          <Tabs.Panel value="allocation" pt="xl">
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
-              <Text fw={500} size="lg" c="white" mb="lg">Asset Allocation</Text>
-              <div className="space-y-4">
-                {allocationData.map((allocation) => (
-                  <div key={allocation.sector}>
-                    <Group justify="space-between" mb="xs">
-                      <Text size="sm" fw={500} c="white">{allocation.sector}</Text>
-                      <Text size="sm" c="white">{allocation.percentage}%</Text>
-                    </Group>
-                    <Progress
-                      value={allocation.percentage}
-                      color={allocation.color}
-                      size="lg"
-                      mb="xs"
-                    />
-                    <Text size="xs" c="dimmed">${allocation.value.toLocaleString()}</Text>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </Tabs.Panel>
-
-          <Tabs.Panel value="performance" pt="xl">
-            <div className="space-y-6">
-              {/* Portfolio Performance Chart */}
-              <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
-                <Card.Section withBorder inheritPadding py="xs">
-                  <Group justify="space-between">
-                    <Text fw={500} size="lg" c="white">Portfolio Performance Chart</Text>
-                    <Badge color="green" variant="light">+14.02% YTD</Badge>
-                  </Group>
-                </Card.Section>
-
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <Text size="lg" fw={600} c="white">Total Portfolio Value</Text>
-                      <Text size="sm" c="dimmed">Historical performance with benchmark comparison</Text>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
-                        1M
-                      </Button>
-                      <Button variant="outline" size="sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
-                        3M
-                      </Button>
-                      <Button variant="filled" size="sm" style={{ backgroundColor: 'hsl(var(--primary))' }}>
-                        1Y
-                      </Button>
-                      <Button variant="outline" size="sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
-                        5Y
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Chart Container */}
-                  <div className="h-80 bg-card rounded-lg border relative overflow-hidden mb-4" style={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <TrendingUp className="h-16 w-16 mx-auto mb-4" style={{ color: 'hsl(var(--primary))' }} />
-                        <h3 className="text-lg font-semibold mb-2" style={{ color: 'hsl(var(--foreground))' }}>
-                          Portfolio Performance Chart
-                        </h3>
-                        <p className="text-sm mb-4" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                          Track your portfolio's growth over time with benchmark comparison
-                        </p>
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          <Badge variant="secondary">Portfolio Value</Badge>
-                          <Badge variant="secondary">S&P 500 Benchmark</Badge>
-                          <Badge variant="secondary">Historical Returns</Badge>
-                          <Badge variant="secondary">Risk Metrics</Badge>
-                        </div>
+                      <p className="font-bold text-foreground text-xl">${holding.currentPrice}</p>
+                      <p className="text-sm text-muted-foreground">Value: ${holding.value.toLocaleString()}</p>
+                      <div className="flex items-center gap-1">
+                        {holding.positive ? (
+                          <ArrowUpRight className="h-4 w-4 text-success" />
+                        ) : (
+                          <ArrowDownRight className="h-4 w-4 text-destructive" />
+                        )}
+                        <span className={`font-semibold ${holding.positive ? 'text-success' : 'text-destructive'}`}>
+                          ${holding.pnl.toLocaleString()} ({holding.pnlPercent}%)
+                        </span>
                       </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-                  {/* Performance Summary */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
-                      <Text size="xs" c="dimmed">1M Return</Text>
-                      <Text size="lg" fw={700} c="green">+2.45%</Text>
-                      <Text size="xs" c="green">vs +1.23% S&P</Text>
+        {/* Performance Tab */}
+        {activeTab === 'performance' && (
+          <div className="space-y-8">
+            {/* Performance Metrics */}
+            <Card className="card-professional">
+              <CardHeader>
+                <CardTitle className="text-xl">Performance Metrics</CardTitle>
+                <CardDescription>Risk and return analysis of your portfolio</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+                  {performanceMetrics.map((metric, index) => (
+                    <div key={index} className="text-center p-4 bg-muted/30 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">{metric.label}</p>
+                      <p className={`text-xl font-bold ${metric.positive ? 'text-success' : 'text-destructive'}`}>
+                        {metric.value}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">{metric.description}</p>
                     </div>
-                    <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
-                      <Text size="xs" c="dimmed">3M Return</Text>
-                      <Text size="lg" fw={700} c="green">+7.89%</Text>
-                      <Text size="xs" c="green">vs +5.67% S&P</Text>
-                    </div>
-                    <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
-                      <Text size="xs" c="dimmed">1Y Return</Text>
-                      <Text size="lg" fw={700} c="green">+14.02%</Text>
-                      <Text size="xs" c="green">vs +11.45% S&P</Text>
-                    </div>
-                    <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
-                      <Text size="xs" c="dimmed">5Y Return</Text>
-                      <Text size="lg" fw={700} c="green">+67.34%</Text>
-                      <Text size="xs" c="green">vs +58.92% S&P</Text>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Performance Comparison */}
+            <Card className="card-professional">
+              <CardHeader>
+                <CardTitle className="text-xl">Performance Comparison</CardTitle>
+                <CardDescription>How your portfolio compares to market benchmarks</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80 bg-muted/30 rounded-lg flex items-center justify-center">
+                  <div className="text-center">
+                    <TrendingUp className="h-16 w-16 mx-auto mb-4 text-primary/50" />
+                    <h3 className="text-lg font-semibold mb-2 text-foreground">
+                      Performance Comparison Chart
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Compare your portfolio performance against S&P 500 and other benchmarks
+                    </p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      <Badge variant="secondary">Your Portfolio</Badge>
+                      <Badge variant="secondary">S&P 500</Badge>
+                      <Badge variant="secondary">NASDAQ</Badge>
+                      <Badge variant="secondary">Russell 2000</Badge>
                     </div>
                   </div>
                 </div>
-              </Card>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-              {/* Performance Metrics */}
-              <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
-                <Text fw={500} size="lg" c="white" mb="lg">Risk & Performance Metrics</Text>
-                <SimpleGrid cols={{ base: 2, md: 4 }} spacing="lg">
-                  <div>
-                    <Text size="sm" c="dimmed">Sharpe Ratio</Text>
-                    <Text size="xl" fw={700} c="green">1.45</Text>
-                    <Text size="xs" c="dimmed">Risk-adjusted returns</Text>
+        {/* Allocation Tab */}
+        {activeTab === 'allocation' && (
+          <Card className="card-professional">
+            <CardHeader>
+              <CardTitle className="text-xl">Asset Allocation</CardTitle>
+              <CardDescription>How your portfolio is distributed across different sectors</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {allocationData.map((allocation, index) => (
+                  <div key={index} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-4 h-4 rounded-full ${allocation.color}`} />
+                        <span className="font-medium text-foreground">{allocation.sector}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-semibold text-foreground">{allocation.percentage}%</span>
+                        <p className="text-sm text-muted-foreground">${allocation.value.toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-3">
+                      <div
+                        className={`h-3 rounded-full ${allocation.color} transition-all duration-500`}
+                        style={{ width: `${allocation.percentage}%` }}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Text size="sm" c="dimmed">Max Drawdown</Text>
-                    <Text size="xl" fw={700} c="red">-8.23%</Text>
-                    <Text size="xs" c="dimmed">Peak to trough decline</Text>
-                  </div>
-                  <div>
-                    <Text size="sm" c="dimmed">Volatility</Text>
-                    <Text size="xl" fw={700} c="white">12.45%</Text>
-                    <Text size="xs" c="dimmed">Annualized standard deviation</Text>
-                  </div>
-                  <div>
-                    <Text size="sm" c="dimmed">Beta</Text>
-                    <Text size="xl" fw={700} c="white">0.87</Text>
-                    <Text size="xs" c="dimmed">Market correlation</Text>
-                  </div>
-                </SimpleGrid>
-              </Card>
-            </div>
-          </Tabs.Panel>
-        </Tabs>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   );
