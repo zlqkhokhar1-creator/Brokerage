@@ -2,10 +2,19 @@
 
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, Text, Group, Badge, Button, Tabs, NumberInput, Select, Stack } from '@mantine/core';
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, Target } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, BarChart3, Target, Keyboard, Download, Settings, Bell } from 'lucide-react';
 import { React19TradingForm } from '@/components/trading/react19-trading-form';
 import { SimpleMarketData } from '@/components/trading/simple-market-data';
-import { useState, startTransition } from 'react';
+import { AdvancedTradingChart } from '@/components/trading/advanced-trading-chart';
+import { OrderBook } from '@/components/trading/order-book';
+import { PositionSizingCalculator } from '@/components/trading/position-sizing-calculator';
+import { TradingJournal } from '@/components/trading/trading-journal';
+import { VirtualMarketDataList } from '@/components/trading/virtual-market-data-list';
+// import { CustomizableDashboard } from '@/components/dashboard/customizable-dashboard';
+// import { PerformanceAnalytics } from '@/components/analytics/performance-analytics';
+import { NotificationCenter } from '@/components/notifications/notification-center';
+import { KeyboardShortcuts } from '@/components/ui/keyboard-shortcuts';
+import { useState, startTransition, useTransition, useDeferredValue, Suspense, useEffect } from 'react';
 
 const marketData = [
   { symbol: 'AAPL', price: 175.43, change: '+3.45%', volume: '45.2M' },
@@ -21,12 +30,46 @@ const positions = [
 
 export default function TradingPage() {
   const [showReact19, setShowReact19] = useState(false);
+  const [activeTab, setActiveTab] = useState('trading');
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const queryClient = useQueryClient();
 
   const toggleReact19 = () => {
     startTransition(() => {
       setShowReact19(!showReact19);
     });
   };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case '/':
+            e.preventDefault();
+            setShowShortcuts(true);
+            break;
+          case 'b':
+            e.preventDefault();
+            // Focus buy button or form
+            break;
+          case 's':
+            e.preventDefault();
+            // Focus sell button or form
+            break;
+          case 'k':
+            e.preventDefault();
+            // Open command palette
+            break;
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <DashboardLayout>
@@ -38,6 +81,22 @@ export default function TradingPage() {
             <p className="text-gray-400 mt-1">Execute trades and manage positions on Invest Pro</p>
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowShortcuts(true)}
+              size="sm"
+            >
+              <Keyboard className="h-4 w-4 mr-2" />
+              Shortcuts
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowNotifications(true)}
+              size="sm"
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              Notifications
+            </Button>
             <Button
               variant={showReact19 ? "filled" : "outline"}
               onClick={toggleReact19}
@@ -72,291 +131,213 @@ export default function TradingPage() {
           </Card>
         )}
 
-        {/* Advanced Trading Chart - Full Width */}
-        <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
-          <Card.Section withBorder inheritPadding py="xs">
-            <Group justify="space-between">
-              <Text fw={500} size="lg" c="white">Advanced Trading Chart</Text>
-              <Badge color="blue" variant="light">Real-time Analysis</Badge>
-            </Group>
-          </Card.Section>
-
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <Text size="xl" fw={700} c="white">AAPL - Apple Inc.</Text>
-                <Text size="sm" c="dimmed">Live OHLCV data with technical indicators for informed trading decisions</Text>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
-                  1D
-                </Button>
-                <Button variant="outline" size="sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
-                  5D
-                </Button>
-                <Button variant="filled" size="sm" style={{ backgroundColor: 'hsl(var(--primary))' }}>
-                  1M
-                </Button>
-                <Button variant="outline" size="sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
-                  3M
-                </Button>
-                <Button variant="outline" size="sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
-                  1Y
-                </Button>
-              </div>
-            </div>
-
-            {/* Chart Container */}
-            <div className="h-96 bg-card rounded-lg border relative overflow-hidden mb-4" style={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <BarChart3 className="h-20 w-20 mx-auto mb-4" style={{ color: 'hsl(var(--primary))' }} />
-                  <h3 className="text-xl font-semibold mb-2" style={{ color: 'hsl(var(--foreground))' }}>
-                    Interactive Trading Chart
-                  </h3>
-                  <p className="text-sm mb-4" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                    Professional candlestick chart with advanced technical analysis
-                  </p>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    <Badge variant="secondary">Candlestick</Badge>
-                    <Badge variant="secondary">Technical Indicators</Badge>
-                    <Badge variant="secondary">Volume Analysis</Badge>
-                    <Badge variant="secondary">Order Flow</Badge>
-                    <Badge variant="secondary">Real-time</Badge>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Technical Indicators Panel */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-              <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
-                <Text size="xs" c="dimmed">Price</Text>
-                <Text size="lg" fw={700} c="white">$175.43</Text>
-                <Text size="xs" c="green">+3.45%</Text>
-              </div>
-              <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
-                <Text size="xs" c="dimmed">SMA (20)</Text>
-                <Text size="lg" fw={700} c="white">172.89</Text>
-                <Text size="xs" c="green">Bullish</Text>
-              </div>
-              <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
-                <Text size="xs" c="dimmed">RSI (14)</Text>
-                <Text size="lg" fw={700} c="white">67.8</Text>
-                <Text size="xs" c="orange">Neutral</Text>
-              </div>
-              <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
-                <Text size="xs" c="dimmed">MACD</Text>
-                <Text size="lg" fw={700} c="white">+1.23</Text>
-                <Text size="xs" c="green">Buy Signal</Text>
-              </div>
-              <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
-                <Text size="xs" c="dimmed">Volume</Text>
-                <Text size="lg" fw={700} c="white">45.2M</Text>
-                <Text size="xs" c="blue">High</Text>
-              </div>
-            </div>
-
-            {/* Trading Signals */}
-            <div className="flex flex-wrap gap-2">
-              <Badge color="green" variant="light" size="lg">Strong Buy Signal</Badge>
-              <Badge color="blue" variant="light">Volume Confirmation</Badge>
-              <Badge color="orange" variant="light">RSI Neutral</Badge>
-              <Badge color="purple" variant="light">MACD Bullish</Badge>
-            </div>
-          </div>
-        </Card>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Order Form */}
-          <div className="lg:col-span-1">
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
-              <Card.Section withBorder inheritPadding py="xs">
-                <Text fw={500} size="lg" c="white">Place Order</Text>
-              </Card.Section>
-
-              <Stack mt="md" gap="md">
-                <Select
-                  label="Symbol"
-                  placeholder="Select stock"
-                  data={[
-                    { value: 'AAPL', label: 'Apple Inc. (AAPL)' },
-                    { value: 'TSLA', label: 'Tesla Inc. (TSLA)' },
-                    { value: 'NVDA', label: 'NVIDIA Corp. (NVDA)' },
-                    { value: 'MSFT', label: 'Microsoft Corp. (MSFT)' },
-                  ]}
-                  styles={{
-                    input: { backgroundColor: '#25262b', color: 'white' },
-                    label: { color: 'white' }
-                  }}
-                />
-
-                <Select
-                  label="Order Type"
-                  placeholder="Select type"
-                  data={[
-                    { value: 'market', label: 'Market Order' },
-                    { value: 'limit', label: 'Limit Order' },
-                    { value: 'stop', label: 'Stop Order' },
-                  ]}
-                  styles={{
-                    input: { backgroundColor: '#25262b', color: 'white' },
-                    label: { color: 'white' }
-                  }}
-                />
-
-                <Select
-                  label="Action"
-                  placeholder="Buy or Sell"
-                  data={[
-                    { value: 'buy', label: 'Buy' },
-                    { value: 'sell', label: 'Sell' },
-                  ]}
-                  styles={{
-                    input: { backgroundColor: '#25262b', color: 'white' },
-                    label: { color: 'white' }
-                  }}
-                />
-
-                <NumberInput
-                  label="Quantity"
-                  placeholder="Number of shares"
-                  min={1}
-                  styles={{
-                    input: { backgroundColor: '#25262b', color: 'white' },
-                    label: { color: 'white' }
-                  }}
-                />
-
-                <NumberInput
-                  label="Price (optional)"
-                  placeholder="Limit price"
-                  min={0}
-                  styles={{
-                    input: { backgroundColor: '#25262b', color: 'white' },
-                    label: { color: 'white' }
-                  }}
-                />
-
-                <Group grow mt="lg">
-                  <Button variant="outline" color="red">Cancel</Button>
-                  <Button color="green">Place Order</Button>
-                </Group>
-              </Stack>
-            </Card>
-          </div>
-
-          {/* Market Data & Positions */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Market Data */}
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
-              <Card.Section withBorder inheritPadding py="xs">
-                <Group justify="space-between">
-                  <Text fw={500} size="lg" c="white">Market Data</Text>
-                  <BarChart3 className="h-5 w-5 text-green-400" />
-                </Group>
-              </Card.Section>
-
-              <div className="mt-4 space-y-3">
-                {marketData.map((stock) => (
-                  <div
-                    key={stock.symbol}
-                    className="flex items-center justify-between p-3 border border-gray-700 rounded hover:bg-gray-700 cursor-pointer transition-colors"
-                  >
-                    <div>
-                      <Text size="sm" fw={600} c="white">{stock.symbol}</Text>
-                      <Text size="xs" c="dimmed">Volume: {stock.volume}</Text>
-                    </div>
-                    <div className="text-right">
-                      <Text size="sm" fw={500} c="white">${stock.price}</Text>
-                      <Text
-                        size="xs"
-                        c={stock.change.startsWith('+') ? 'green' : 'red'}
-                        fw={500}
-                      >
-                        {stock.change}
-                      </Text>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            {/* Current Positions */}
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
-              <Card.Section withBorder inheritPadding py="xs">
-                <Group justify="space-between">
-                  <Text fw={500} size="lg" c="white">Current Positions</Text>
-                  <Target className="h-5 w-5 text-blue-400" />
-                </Group>
-              </Card.Section>
-
-              <div className="mt-4 space-y-3">
-                {positions.map((position) => (
-                  <div
-                    key={position.symbol}
-                    className="flex items-center justify-between p-3 border border-gray-700 rounded"
-                  >
-                    <div>
-                      <Text size="sm" fw={600} c="white">{position.symbol}</Text>
-                      <Text size="xs" c="dimmed">{position.shares} shares @ ${position.avgPrice}</Text>
-                    </div>
-                    <div className="text-right">
-                      <Text size="sm" fw={500} c="white">${position.currentPrice}</Text>
-                      <Text
-                        size="xs"
-                        c={position.pnl >= 0 ? 'green' : 'red'}
-                        fw={500}
-                      >
-                        P&L: ${position.pnl} ({position.pnlPercent}%)
-                      </Text>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-        </div>
-
-        {/* Order History */}
-        <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
-          <Card.Section withBorder inheritPadding py="xs">
-            <Text fw={500} size="lg" c="white">Recent Orders</Text>
-          </Card.Section>
-
-          <div className="mt-4 space-y-3">
-            {[
-              { symbol: 'AAPL', type: 'Buy', quantity: 10, price: 175.43, status: 'Filled', time: '2 hours ago' },
-              { symbol: 'TSLA', type: 'Sell', quantity: 5, price: 245.67, status: 'Pending', time: '4 hours ago' },
-              { symbol: 'NVDA', type: 'Buy', quantity: 3, price: 432.12, status: 'Filled', time: '1 day ago' },
-            ].map((order, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 border border-gray-700 rounded"
+        {/* Main Trading Interface */}
+        <div className="w-full">
+          <div className="flex space-x-1 mb-6">
+            {['trading', 'chart', 'orderbook', 'journal', 'tools'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === tab
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
               >
-                <div className="flex items-center gap-4">
-                  <Badge color={order.type === 'Buy' ? 'green' : 'red'} variant="light">
-                    {order.type}
-                  </Badge>
-                  <div>
-                    <Text size="sm" fw={600} c="white">{order.symbol}</Text>
-                    <Text size="xs" c="dimmed">{order.quantity} shares @ ${order.price}</Text>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <Badge
-                    color={order.status === 'Filled' ? 'green' : 'yellow'}
-                    variant="light"
-                    size="sm"
-                  >
-                    {order.status}
-                  </Badge>
-                  <Text size="xs" c="dimmed" mt="xs">{order.time}</Text>
-                </div>
-              </div>
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
             ))}
           </div>
-        </Card>
+
+          {activeTab === 'trading' && (
+            <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Order Form */}
+              <div className="lg:col-span-1">
+                <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+                  <Card.Section withBorder inheritPadding py="xs">
+                    <Text fw={500} size="lg" c="white">Place Order</Text>
+                  </Card.Section>
+
+                  <Stack mt="md" gap="md">
+                    <Select
+                      label="Symbol"
+                      placeholder="Select stock"
+                      data={[
+                        { value: 'AAPL', label: 'Apple Inc. (AAPL)' },
+                        { value: 'TSLA', label: 'Tesla Inc. (TSLA)' },
+                        { value: 'NVDA', label: 'NVIDIA Corp. (NVDA)' },
+                        { value: 'MSFT', label: 'Microsoft Corp. (MSFT)' },
+                      ]}
+                      styles={{
+                        input: { backgroundColor: '#25262b', color: 'white' },
+                        label: { color: 'white' }
+                      }}
+                    />
+
+                    <Select
+                      label="Order Type"
+                      placeholder="Select type"
+                      data={[
+                        { value: 'market', label: 'Market Order' },
+                        { value: 'limit', label: 'Limit Order' },
+                        { value: 'stop', label: 'Stop Order' },
+                        { value: 'stop_limit', label: 'Stop Limit Order' },
+                      ]}
+                      styles={{
+                        input: { backgroundColor: '#25262b', color: 'white' },
+                        label: { color: 'white' }
+                      }}
+                    />
+
+                    <Select
+                      label="Action"
+                      placeholder="Buy or Sell"
+                      data={[
+                        { value: 'buy', label: 'Buy' },
+                        { value: 'sell', label: 'Sell' },
+                      ]}
+                      styles={{
+                        input: { backgroundColor: '#25262b', color: 'white' },
+                        label: { color: 'white' }
+                      }}
+                    />
+
+                    <NumberInput
+                      label="Quantity"
+                      placeholder="Number of shares"
+                      min={1}
+                      styles={{
+                        input: { backgroundColor: '#25262b', color: 'white' },
+                        label: { color: 'white' }
+                      }}
+                    />
+
+                    <NumberInput
+                      label="Price (optional)"
+                      placeholder="Limit price"
+                      min={0}
+                      styles={{
+                        input: { backgroundColor: '#25262b', color: 'white' },
+                        label: { color: 'white' }
+                      }}
+                    />
+
+                    <Group grow mt="lg">
+                      <Button variant="outline" color="red">Cancel</Button>
+                      <Button color="green">Place Order</Button>
+                    </Group>
+                  </Stack>
+                </Card>
+              </div>
+
+              {/* Market Data & Positions */}
+              <div className="lg:col-span-2 space-y-6">
+                <Suspense fallback={<div>Loading market data...</div>}>
+                  <VirtualMarketDataList height={300} />
+                </Suspense>
+
+                {/* Current Positions */}
+                <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+                  <Card.Section withBorder inheritPadding py="xs">
+                    <Group justify="space-between">
+                      <Text fw={500} size="lg" c="white">Current Positions</Text>
+                      <Target className="h-5 w-5 text-blue-400" />
+                    </Group>
+                  </Card.Section>
+
+                  <div className="mt-4 space-y-3">
+                    {positions.map((position) => (
+                      <div
+                        key={position.symbol}
+                        className="flex items-center justify-between p-3 border border-gray-700 rounded"
+                      >
+                        <div>
+                          <Text size="sm" fw={600} c="white">{position.symbol}</Text>
+                          <Text size="xs" c="dimmed">{position.shares} shares @ ${position.avgPrice}</Text>
+                        </div>
+                        <div className="text-right">
+                          <Text size="sm" fw={500} c="white">${position.currentPrice}</Text>
+                          <Text
+                            size="xs"
+                            c={position.pnl >= 0 ? 'green' : 'red'}
+                            fw={500}
+                          >
+                            P&L: ${position.pnl} ({position.pnlPercent}%)
+                          </Text>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+            </div>
+            </div>
+          )}
+
+          {activeTab === 'chart' && (
+            <div className="space-y-6">
+              <Suspense fallback={<div>Loading chart...</div>}>
+                <AdvancedTradingChart symbol="AAPL" height={500} />
+              </Suspense>
+            </div>
+          )}
+
+          {activeTab === 'orderbook' && (
+            <div className="space-y-6">
+              <Suspense fallback={<div>Loading order book...</div>}>
+                <OrderBook symbol="AAPL" />
+              </Suspense>
+            </div>
+          )}
+
+          {activeTab === 'journal' && (
+            <div className="space-y-6">
+              <Suspense fallback={<div>Loading trading journal...</div>}>
+                <TradingJournal userId="user-123" />
+              </Suspense>
+            </div>
+          )}
+
+          {activeTab === 'tools' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Suspense fallback={<div>Loading position calculator...</div>}>
+                  <PositionSizingCalculator symbol="AAPL" currentPrice={175.43} />
+                </Suspense>
+                <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+                  <Card.Section withBorder inheritPadding py="xs">
+                    <Text fw={500} size="lg" c="white">Quick Tools</Text>
+                  </Card.Section>
+                  <div className="mt-4 space-y-4">
+                    <Button variant="outline" className="w-full">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Portfolio
+                    </Button>
+                    <Button variant="outline" className="w-full">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Trading Settings
+                    </Button>
+                    <Button variant="outline" className="w-full">
+                      <Bell className="h-4 w-4 mr-2" />
+                      Set Price Alert
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modals */}
+        <KeyboardShortcuts 
+          isOpen={showShortcuts} 
+          onClose={() => setShowShortcuts(false)} 
+        />
+        <NotificationCenter 
+          isOpen={showNotifications} 
+          onClose={() => setShowNotifications(false)} 
+        />
       </div>
     </DashboardLayout>
   );
