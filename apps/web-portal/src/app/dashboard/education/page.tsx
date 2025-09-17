@@ -1,6 +1,7 @@
 'use client';
 
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { PageHeader } from '@/components/ui/page-header';
 import { Card, Text, Group, Badge, Button, SimpleGrid, Tabs, Progress } from '@mantine/core';
 import { BookOpen, Play, FileText, Award, TrendingUp, BarChart3, Users, Star } from 'lucide-react';
 
@@ -99,20 +100,15 @@ export default function EducationPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Invest Pro Education</h1>
-            <p className="text-gray-400 mt-1">Learn, grow, and master your investment skills on Invest Pro</p>
-          </div>
-          <Button leftSection={<BookOpen className="h-4 w-4" />}>
-            My Learning
-          </Button>
-        </div>
+        <PageHeader
+          title="Invest Pro Education"
+          description="Learn, grow, and master your investment skills on Invest Pro"
+          actions={<Button leftSection={<BookOpen className="h-4 w-4" />}>My Learning</Button>}
+        />
 
         {/* Learning Progress */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card shadow="sm" padding="md" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+          <Card shadow="sm" padding="md" radius="md" withBorder className="bg-card border-border">
             <Group gap="sm">
               <BookOpen className="h-5 w-5 text-blue-400" />
               <div>
@@ -121,7 +117,7 @@ export default function EducationPage() {
               </div>
             </Group>
           </Card>
-          <Card shadow="sm" padding="md" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+          <Card shadow="sm" padding="md" radius="md" withBorder className="bg-card border-border">
             <Group gap="sm">
               <Award className="h-5 w-5 text-green-400" />
               <div>
@@ -130,7 +126,7 @@ export default function EducationPage() {
               </div>
             </Group>
           </Card>
-          <Card shadow="sm" padding="md" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+          <Card shadow="sm" padding="md" radius="md" withBorder className="bg-card border-border">
             <Group gap="sm">
               <TrendingUp className="h-5 w-5 text-purple-400" />
               <div>
@@ -151,14 +147,14 @@ export default function EducationPage() {
           <Tabs.Panel value="courses" pt="xl">
             <div className="space-y-6">
               {/* Learning Paths */}
-              <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+              <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
                 <Card.Section withBorder inheritPadding py="xs">
                   <Text fw={500} size="lg" c="white">Learning Paths</Text>
                 </Card.Section>
 
                 <div className="mt-4 space-y-4">
                   {learningPaths.map((path) => (
-                    <Card key={path.title} shadow="sm" padding="md" radius="md" withBorder style={{ backgroundColor: '#25262b' }}>
+                    <Card key={path.title} shadow="sm" padding="md" radius="md" withBorder className="bg-card border-border">
                       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div className="flex-1">
                           <Group justify="space-between" mb="xs">
@@ -184,14 +180,14 @@ export default function EducationPage() {
               </Card>
 
               {/* Featured Courses */}
-              <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+              <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
                 <Card.Section withBorder inheritPadding py="xs">
                   <Text fw={500} size="lg" c="white">Featured Courses</Text>
                 </Card.Section>
 
                 <SimpleGrid cols={1} spacing="md" mt="md">
                   {featuredCourses.map((course) => (
-                    <Card key={course.title} shadow="sm" padding="md" radius="md" withBorder style={{ backgroundColor: '#25262b' }}>
+                    <Card key={course.title} shadow="sm" padding="md" radius="md" withBorder className="bg-card border-border">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <Text size="lg" fw={600} c="white" mb="xs">{course.title}</Text>
@@ -223,14 +219,14 @@ export default function EducationPage() {
           </Tabs.Panel>
 
           <Tabs.Panel value="insights" pt="xl">
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
               <Card.Section withBorder inheritPadding py="xs">
                 <Text fw={500} size="lg" c="white">Market Insights & Analysis</Text>
               </Card.Section>
 
               <div className="mt-4 space-y-4">
                 {marketInsights.map((insight) => (
-                  <Card key={insight.title} shadow="sm" padding="md" radius="md" withBorder style={{ backgroundColor: '#25262b' }}>
+                    <Card key={insight.title} shadow="sm" padding="md" radius="md" withBorder className="bg-card border-border">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <Group justify="space-between" mb="xs">
@@ -254,7 +250,7 @@ export default function EducationPage() {
           </Tabs.Panel>
 
           <Tabs.Panel value="achievements" pt="xl">
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
               <Card.Section withBorder inheritPadding py="xs">
                 <Text fw={500} size="lg" c="white">Achievements & Milestones</Text>
               </Card.Section>

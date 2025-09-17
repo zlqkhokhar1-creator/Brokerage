@@ -1,6 +1,7 @@
 'use client';
 
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { PageHeader } from '@/components/ui/page-header';
 import { Card, Text, Group, Badge, Button, SimpleGrid, Progress, Tabs, Select, NumberInput } from '@mantine/core';
 import { Cpu, TrendingUp, TrendingDown, Play, Pause, BarChart3, Zap, Target, AlertTriangle } from 'lucide-react';
 
@@ -91,21 +92,16 @@ export default function AITradingPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white">AI Trading</h1>
-            <p className="text-gray-400 mt-1">Algorithmic trading strategies and automated execution</p>
-          </div>
-          <div className="flex gap-2">
-            <Badge color="green" variant="light" size="lg" leftSection={<Cpu className="h-4 w-4" />}>
-              3 Strategies Active
-            </Badge>
-            <Button leftSection={<Play className="h-4 w-4" />}>
-              Start All
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          title="AI Trading"
+          description="Algorithmic trading strategies and automated execution"
+          actions={
+            <div className="flex gap-2">
+              <Badge color="green" variant="light" size="lg" leftSection={<Cpu className="h-4 w-4" />}>3 Strategies Active</Badge>
+              <Button leftSection={<Play className="h-4 w-4" />}>Start All</Button>
+            </div>
+          }
+        />
 
         {/* Risk Metrics Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -158,7 +154,7 @@ export default function AITradingPage() {
           <Tabs.Panel value="strategies" pt="xl">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {tradingStrategies.map((strategy) => (
-                <Card key={strategy.name} shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+                <Card key={strategy.name} shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <Group justify="space-between" mb="xs">

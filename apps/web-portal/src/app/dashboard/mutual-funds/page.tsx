@@ -1,6 +1,7 @@
 'use client';
 
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { PageHeader } from '@/components/ui/page-header';
 import { Card, Text, Group, Badge, Button, SimpleGrid, Progress, Tabs } from '@mantine/core';
 import { TrendingUp, TrendingDown, DollarSign, Shield, Target, BarChart3 } from 'lucide-react';
 
@@ -76,16 +77,11 @@ export default function MutualFundsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Invest Pro Mutual Funds</h1>
-            <p className="text-gray-400 mt-1">Discover and invest in professionally managed funds on Invest Pro</p>
-          </div>
-          <Button leftSection={<BarChart3 className="h-4 w-4" />}>
-            Compare Funds
-          </Button>
-        </div>
+        <PageHeader
+          title="Invest Pro Mutual Funds"
+          description="Discover and invest in professionally managed funds on Invest Pro"
+          actions={<Button leftSection={<BarChart3 className="h-4 w-4" />}>Compare Funds</Button>}
+        />
 
         {/* Fund Categories */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -95,7 +91,7 @@ export default function MutualFundsPage() {
             { name: 'Balanced Funds', count: 28, return: '+8.1%' },
             { name: 'Money Market', count: 15, return: '+2.9%' },
           ].map((category) => (
-            <Card key={category.name} shadow="sm" padding="md" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card key={category.name} shadow="sm" padding="md" radius="md" withBorder className="bg-card border-border">
               <Text size="sm" fw={500} c="white">{category.name}</Text>
               <Text size="lg" fw={700} c="white">{category.count}</Text>
               <Text size="xs" c="green">{category.return}</Text>
@@ -111,7 +107,7 @@ export default function MutualFundsPage() {
 
           <SimpleGrid cols={1} spacing="lg" mt="md">
             {mutualFunds.map((fund) => (
-              <Card key={fund.symbol} shadow="sm" padding="md" radius="md" withBorder style={{ backgroundColor: '#25262b' }}>
+              <Card key={fund.symbol} shadow="sm" padding="md" radius="md" withBorder className="bg-card border-border">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                   <div className="flex-1">
                     <Group justify="space-between" mb="xs">
@@ -182,7 +178,7 @@ export default function MutualFundsPage() {
         </Card>
 
         {/* Performance Comparison */}
-        <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+        <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
           <Card.Section withBorder inheritPadding py="xs">
             <Text fw={500} size="lg" c="white">Performance Comparison</Text>
           </Card.Section>
@@ -207,7 +203,7 @@ export default function MutualFundsPage() {
         </Card>
 
         {/* Investment Calculator */}
-        <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+        <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
           <Card.Section withBorder inheritPadding py="xs">
             <Text fw={500} size="lg" c="white">Investment Calculator</Text>
           </Card.Section>

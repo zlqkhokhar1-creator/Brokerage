@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { MantineProvider, createTheme } from '@mantine/core'
+import { QueryProvider } from '@/components/query-provider'
+import { CommandPalette } from '@/components/command-palette'
+import { StatusBar } from '@/components/layout/status-bar'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ThemeInitializer } from '@/components/theme-initializer'
 import './globals.css'
@@ -93,7 +96,11 @@ export default function RootLayout({
         >
           <ThemeInitializer />
           <MantineProvider theme={theme}>
-            {children}
+            <QueryProvider>
+              {children}
+              <CommandPalette />
+              <StatusBar />
+            </QueryProvider>
           </MantineProvider>
         </ThemeProvider>
       </body>

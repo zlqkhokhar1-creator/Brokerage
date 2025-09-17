@@ -1,6 +1,7 @@
 'use client';
 
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { PageHeader } from '@/components/ui/page-header';
 import { Card, Text, Group, Badge, Button, ScrollArea, Avatar } from '@mantine/core';
 import { Newspaper, ExternalLink, TrendingUp, TrendingDown, Clock, Filter } from 'lucide-react';
 
@@ -79,34 +80,29 @@ export default function NewsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Invest Pro News</h1>
-            <p className="text-gray-400 mt-1">Stay informed with the latest financial news and market insights</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" leftSection={<Filter className="h-4 w-4" />}>
-              Filter
-            </Button>
-            <Button variant="outline" leftSection={<Newspaper className="h-4 w-4" />}>
-              My Feed
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          title="Invest Pro News"
+          description="Stay informed with the latest financial news and market insights"
+          actions={
+            <div className="flex gap-2">
+              <Button variant="outline" leftSection={<Filter className="h-4 w-4" />}>Filter</Button>
+              <Button variant="outline" leftSection={<Newspaper className="h-4 w-4" />}>My Feed</Button>
+            </div>
+          }
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Main News Feed */}
           <div className="lg:col-span-3">
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
               <Card.Section withBorder inheritPadding py="xs">
-                <Text fw={500} size="lg" c="white">Latest News</Text>
+                <Text fw={500} size="lg">Latest News</Text>
               </Card.Section>
 
               <ScrollArea h={600} mt="md">
                 <div className="space-y-4">
                   {newsArticles.map((article) => (
-                    <Card key={article.id} shadow="sm" padding="md" radius="md" withBorder style={{ backgroundColor: '#25262b' }}>
+                    <Card key={article.id} shadow="sm" padding="md" radius="md" withBorder className="bg-card border-border">
                       <div className="flex gap-4">
                         <div className="flex-1">
                           <Group justify="space-between" mb="xs">
@@ -118,12 +114,12 @@ export default function NewsPage() {
                               {article.category}
                             </Badge>
                             <Group gap="xs">
-                              <Clock className="h-3 w-3 text-gray-400" />
+                              <Clock className="h-3 w-3 text-muted-foreground" />
                               <Text size="xs" c="dimmed">{article.time}</Text>
                             </Group>
                           </Group>
 
-                          <Text size="lg" fw={600} c="white" mb="sm" lineClamp={2}>
+                          <Text size="lg" fw={600} mb="sm" lineClamp={2}>
                             {article.title}
                           </Text>
 
@@ -137,7 +133,7 @@ export default function NewsPage() {
                                 {article.author.split(' ').map(n => n[0]).join('')}
                               </Avatar>
                               <div>
-                                <Text size="xs" c="white">{article.author}</Text>
+                                <Text size="xs">{article.author}</Text>
                                 <Text size="xs" c="dimmed">{article.source}</Text>
                               </div>
                             </div>
@@ -161,9 +157,9 @@ export default function NewsPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Trending Topics */}
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
               <Card.Section withBorder inheritPadding py="xs">
-                <Text fw={500} size="lg" c="white">Trending Topics</Text>
+                <Text fw={500} size="lg">Trending Topics</Text>
               </Card.Section>
 
               <div className="mt-4 space-y-3">
@@ -171,7 +167,7 @@ export default function NewsPage() {
                   <div key={topic.topic} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Text size="sm" c="dimmed">#{index + 1}</Text>
-                      <Text size="sm" c="white">{topic.topic}</Text>
+                      <Text size="sm">{topic.topic}</Text>
                     </div>
                     <div className="text-right">
                       <Text size="xs" c="green" fw={500}>{topic.change}</Text>
@@ -183,28 +179,28 @@ export default function NewsPage() {
             </Card>
 
             {/* Market Sentiment */}
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
               <Card.Section withBorder inheritPadding py="xs">
-                <Text fw={500} size="lg" c="white">Market Sentiment</Text>
+                <Text fw={500} size="lg">Market Sentiment</Text>
               </Card.Section>
 
               <div className="mt-4 space-y-4">
                 <div>
                   <Group justify="space-between" mb="xs">
-                    <Text size="sm" c="white">Bullish</Text>
+                    <Text size="sm">Bullish</Text>
                     <Text size="sm" c="green" fw={500}>68%</Text>
                   </Group>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div className="w-full bg-muted rounded-full h-2">
                     <div className="bg-green-500 h-2 rounded-full" style={{ width: '68%' }}></div>
                   </div>
                 </div>
 
                 <div>
                   <Group justify="space-between" mb="xs">
-                    <Text size="sm" c="white">Bearish</Text>
+                    <Text size="sm">Bearish</Text>
                     <Text size="sm" c="red" fw={500}>32%</Text>
                   </Group>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div className="w-full bg-muted rounded-full h-2">
                     <div className="bg-red-500 h-2 rounded-full" style={{ width: '32%' }}></div>
                   </div>
                 </div>
@@ -212,9 +208,9 @@ export default function NewsPage() {
             </Card>
 
             {/* Quick Actions */}
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
               <Card.Section withBorder inheritPadding py="xs">
-                <Text fw={500} size="lg" c="white">Quick Actions</Text>
+                <Text fw={500} size="lg">Quick Actions</Text>
               </Card.Section>
 
               <div className="mt-4 space-y-2">
