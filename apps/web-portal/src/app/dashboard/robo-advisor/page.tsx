@@ -1,6 +1,7 @@
 'use client';
 
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { PageHeader } from '@/components/ui/page-header';
 import { Card, Text, Group, Badge, Button, SimpleGrid, Progress, RingProgress, Tabs, Select } from '@mantine/core';
 import { Bot, Target, TrendingUp, Shield, DollarSign, PieChart, Calendar, Zap } from 'lucide-react';
 
@@ -92,16 +93,11 @@ export default function RoboAdvisorPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Robo Advisor</h1>
-            <p className="text-gray-400 mt-1">AI-powered financial planning and portfolio management</p>
-          </div>
-          <Badge color="blue" variant="light" size="lg" leftSection={<Bot className="h-4 w-4" />}>
-            Robo Advisor Active
-          </Badge>
-        </div>
+        <PageHeader
+          title="Robo Advisor"
+          description="AI-powered financial planning and portfolio management"
+          actions={<Badge color="blue" variant="light" size="lg" leftSection={<Bot className="h-4 w-4" />}>Robo Advisor Active</Badge>}
+        />
 
         {/* Risk Profile Assessment */}
         <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>

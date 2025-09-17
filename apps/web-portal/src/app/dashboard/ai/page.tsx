@@ -1,6 +1,7 @@
 'use client';
 
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { PageHeader } from '@/components/ui/page-header';
 import { Card, Text, Group, Badge, Button, SimpleGrid, Progress, RingProgress, Tabs } from '@mantine/core';
 import { Brain, TrendingUp, TrendingDown, Shield, Target, Zap, BarChart3, AlertTriangle } from 'lucide-react';
 
@@ -60,16 +61,11 @@ export default function AIDashboardPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white">AI Dashboard</h1>
-            <p className="text-gray-400 mt-1">Intelligent insights and AI-powered trading recommendations</p>
-          </div>
-          <Badge color="blue" variant="light" size="lg" leftSection={<Brain className="h-4 w-4" />}>
-            AI Active
-          </Badge>
-        </div>
+        <PageHeader
+          title="AI Dashboard"
+          description="Intelligent insights and AI-powered trading recommendations"
+          actions={<Badge color="blue" variant="light" size="lg" leftSection={<Brain className="h-4 w-4" />}>AI Active</Badge>}
+        />
 
         {/* AI Overview Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

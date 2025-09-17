@@ -1,6 +1,7 @@
 'use client';
 
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { PageHeader } from '@/components/ui/page-header';
 import { Card, Text, Group, Badge, Button, Avatar, Tabs, ScrollArea } from '@mantine/core';
 import { Heart, MessageCircle, Share2, TrendingUp, Users, Award, ThumbsUp } from 'lucide-react';
 
@@ -90,21 +91,16 @@ export default function SocialPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Invest Pro Social</h1>
-            <p className="text-gray-400 mt-1">Connect with traders and follow market insights on Invest Pro</p>
-          </div>
-          <Button leftSection={<Share2 className="h-4 w-4" />}>
-            Share Your Trade
-          </Button>
-        </div>
+        <PageHeader
+          title="Invest Pro Social"
+          description="Connect with traders and follow market insights on Invest Pro"
+          actions={<Button leftSection={<Share2 className="h-4 w-4" />}>Share Your Trade</Button>}
+        />
 
         {/* Community Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {communityStats.map((stat) => (
-            <Card key={stat.label} shadow="sm" padding="md" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card key={stat.label} shadow="sm" padding="md" radius="md" withBorder className="bg-card border-border">
               <Group gap="sm">
                 <stat.icon className="h-5 w-5 text-green-400" />
                 <div>
@@ -119,15 +115,15 @@ export default function SocialPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Feed */}
           <div className="lg:col-span-2">
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
               <Card.Section withBorder inheritPadding py="xs">
-                <Text fw={500} size="lg" c="white">Trading Feed</Text>
+                <Text fw={500} size="lg">Trading Feed</Text>
               </Card.Section>
 
               <ScrollArea h={600} mt="md">
                 <div className="space-y-4">
                   {socialPosts.map((post) => (
-                    <Card key={post.id} shadow="sm" padding="md" radius="md" withBorder style={{ backgroundColor: '#25262b' }}>
+                    <Card key={post.id} shadow="sm" padding="md" radius="md" withBorder className="bg-card border-border">
                       <div className="flex gap-3">
                         <Avatar color="blue" size="md">
                           {post.avatar}
@@ -135,7 +131,7 @@ export default function SocialPage() {
                         <div className="flex-1">
                           <Group justify="space-between" mb="xs">
                             <div>
-                              <Text size="sm" fw={600} c="white">{post.trader}</Text>
+                              <Text size="sm" fw={600}>{post.trader}</Text>
                               <Text size="xs" c="dimmed">{post.username} • {post.timestamp}</Text>
                             </div>
                             <Badge
@@ -147,7 +143,7 @@ export default function SocialPage() {
                             </Badge>
                           </Group>
 
-                          <Text size="sm" c="white" mb="sm">
+                          <Text size="sm" mb="sm">
                             {post.content}
                           </Text>
 
@@ -180,9 +176,9 @@ export default function SocialPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Trending Traders */}
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
               <Card.Section withBorder inheritPadding py="xs">
-                <Text fw={500} size="lg" c="white">Trending Traders</Text>
+                <Text fw={500} size="lg">Trending Traders</Text>
               </Card.Section>
 
               <div className="mt-4 space-y-4">
@@ -192,7 +188,7 @@ export default function SocialPage() {
                       {trader.avatar}
                     </Avatar>
                     <div className="flex-1">
-                      <Text size="sm" fw={600} c="white">{trader.name}</Text>
+                      <Text size="sm" fw={600}>{trader.name}</Text>
                       <Text size="xs" c="dimmed">{trader.username}</Text>
                       <Group gap="xs" mt="xs">
                         <Badge size="xs" color="blue">{trader.badge}</Badge>
@@ -212,34 +208,34 @@ export default function SocialPage() {
             </Card>
 
             {/* Market Sentiment */}
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
               <Card.Section withBorder inheritPadding py="xs">
-                <Text fw={500} size="lg" c="white">Market Sentiment</Text>
+                <Text fw={500} size="lg">Market Sentiment</Text>
               </Card.Section>
 
               <div className="mt-4 space-y-3">
                 <div className="flex justify-between items-center">
-                  <Text size="sm" c="white">Bullish</Text>
+                  <Text size="sm">Bullish</Text>
                   <Text size="sm" c="green" fw={500}>68%</Text>
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
+                <div className="w-full bg-muted rounded-full h-2">
                   <div className="bg-green-500 h-2 rounded-full" style={{ width: '68%' }}></div>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <Text size="sm" c="white">Bearish</Text>
+                  <Text size="sm">Bearish</Text>
                   <Text size="sm" c="red" fw={500}>32%</Text>
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
+                <div className="w-full bg-muted rounded-full h-2">
                   <div className="bg-red-500 h-2 rounded-full" style={{ width: '32%' }}></div>
                 </div>
               </div>
             </Card>
 
             {/* Quick Actions */}
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
               <Card.Section withBorder inheritPadding py="xs">
-                <Text fw={500} size="lg" c="white">Quick Actions</Text>
+                <Text fw={500} size="lg">Quick Actions</Text>
               </Card.Section>
 
               <div className="mt-4 space-y-2">
