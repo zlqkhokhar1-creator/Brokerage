@@ -1,6 +1,8 @@
 'use client';
 
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { PageHeader } from '@/components/ui/page-header';
+import { DataGrid } from '@/components/data/ag-data-grid';
 import { Card, Text, Group, Badge, Button, SimpleGrid, ActionIcon, Menu } from '@mantine/core';
 import { Star, Plus, MoreVertical, TrendingUp, TrendingDown, BarChart3, Edit, Trash2 } from 'lucide-react';
 
@@ -59,23 +61,18 @@ export default function WatchlistsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Invest Pro Watchlists</h1>
-            <p className="text-gray-400 mt-1">Create and manage your personalized stock watchlists</p>
-          </div>
-          <Button leftSection={<Plus className="h-4 w-4" />}>
-            Create Watchlist
-          </Button>
-        </div>
+        <PageHeader
+          title="Invest Pro Watchlists"
+          description="Create and manage your personalized stock watchlists"
+          actions={<Button leftSection={<Plus className="h-4 w-4" />}>Create Watchlist</Button>}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Watchlists Grid */}
           <div className="lg:col-span-2">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {watchlists.map((watchlist) => (
-                <Card key={watchlist.id} shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+                <Card key={watchlist.id} shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Star className={`h-5 w-5 ${watchlist.isDefault ? 'text-yellow-400 fill-current' : 'text-gray-400'}`} />
@@ -143,7 +140,7 @@ export default function WatchlistsPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Market Movers */}
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
               <Card.Section withBorder inheritPadding py="xs">
                 <Text fw={500} size="lg" c="white">Market Movers</Text>
               </Card.Section>
@@ -174,7 +171,7 @@ export default function WatchlistsPage() {
             </Card>
 
             {/* Watchlist Stats */}
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
               <Card.Section withBorder inheritPadding py="xs">
                 <Text fw={500} size="lg" c="white">Watchlist Stats</Text>
               </Card.Section>
@@ -202,10 +199,30 @@ export default function WatchlistsPage() {
             </Card>
 
             {/* Quick Actions */}
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+            <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
               <Card.Section withBorder inheritPadding py="xs">
                 <Text fw={500} size="lg" c="white">Quick Actions</Text>
               </Card.Section>
+            {/* Pro Data Grid Example */}
+            <Card shadow="sm" padding="lg" radius="md" withBorder className="bg-card border-border">
+              <Card.Section withBorder inheritPadding py="xs">
+                <Text fw={500} size="lg">Watchlist Movers</Text>
+              </Card.Section>
+              <div className="mt-4">
+                {/* @ts-ignore generic */}
+                <DataGrid
+                  rows={marketMovers}
+                  columns={[
+                    { headerName: 'Symbol', field: 'symbol', width: 120 },
+                    { headerName: 'Name', field: 'name', flex: 2 },
+                    { headerName: 'Price', field: 'price', width: 120, valueFormatter: p => `$${p.value}` },
+                    { headerName: 'Change', field: 'change', width: 120 },
+                    { headerName: 'Volume', field: 'volume', width: 140 },
+                  ]}
+                  height={360}
+                />
+              </div>
+            </Card>
 
               <div className="mt-4 space-y-2">
                 <Button variant="outline" size="sm" fullWidth leftSection={<Plus className="h-4 w-4" />}>
