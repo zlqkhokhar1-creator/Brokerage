@@ -36,8 +36,8 @@ function MarketStatusFooter() {
   }, []);
 
   return (
-    <div className="text-xs text-gray-400">
-      <p>Market Status: <span className="text-green-400">Open</span></p>
+    <div className="text-xs text-muted-foreground">
+      <p>Market Status: <span className="text-success">Open</span></p>
       <p>Last Update: {currentTime}</p>
     </div>
   );
@@ -67,29 +67,29 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Mobile overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={onClose}
         />
       )}
 
       {/* Sidebar */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-[#0f0f0f] border-r border-gray-700 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 shadow-lg",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+        <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-green-500 rounded flex items-center justify-center">
-              <span className="text-black font-bold text-sm">B</span>
+            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-sm">B</span>
             </div>
-            <span className="font-bold text-lg">Invest Pro</span>
+            <span className="font-bold text-lg text-primary">Invest Pro</span>
           </div>
           <button
             onClick={onClose}
-            className="md:hidden p-1 rounded hover:bg-gray-700"
+            className="md:hidden p-1 rounded hover:bg-accent"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
 
@@ -105,8 +105,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     className={cn(
                       "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                       isActive
-                        ? "bg-green-500 text-black"
-                        : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                     )}
                     onClick={() => onClose()}
                   >
@@ -120,7 +120,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-700">
+        <div className="p-4 border-t border-border">
           <MarketStatusFooter />
         </div>
       </div>

@@ -12,7 +12,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-white flex">
+    <div className="min-h-screen bg-page text-primary flex">
       {/* Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
@@ -25,7 +25,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         {/* Page content - scrollable area below header */}
-        <main className="flex-1 p-4 md:p-6 overflow-auto">
+        <main className="flex-1 bg-page overflow-auto scrollbar-clean">
           {children}
         </main>
       </div>

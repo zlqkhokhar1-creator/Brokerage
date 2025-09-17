@@ -2,7 +2,7 @@
 
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, Text, Group, Badge, Table, ScrollArea, Button } from '@mantine/core';
-import { TrendingUp, TrendingDown, Search, Filter } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 
 const marketIndices = [
   { name: 'S&P 500', value: '4,567.89', change: '+1.23%', isPositive: true },
@@ -67,6 +67,7 @@ export default function MarketsPage() {
             ))}
           </div>
         </Card>
+
 
         {/* Top Movers */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

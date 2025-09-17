@@ -3,6 +3,7 @@
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, Text, Group, Button, Switch, Select, TextInput, PasswordInput, Tabs, Avatar, Badge } from '@mantine/core';
 import { User, Shield, Bell, Palette, Globe, Key, Smartphone, Mail } from 'lucide-react';
+import { ThemePicker } from '@/components/theme/theme-picker';
 
 const userProfile = {
   name: 'John Doe',
@@ -294,114 +295,105 @@ export default function SettingsPage() {
           </Tabs.Panel>
 
           <Tabs.Panel value="preferences" pt="xl">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Display Settings */}
-              <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
-                <Card.Section withBorder inheritPadding py="xs">
-                  <Text fw={500} size="lg" c="white">Display Settings</Text>
-                </Card.Section>
+            <div className="space-y-8">
+              {/* Theme Picker */}
+              <ThemePicker />
 
-                <div className="mt-4 space-y-4">
-                  <Select
-                    label="Theme"
-                    placeholder="Select theme"
-                    data={[
-                      { value: 'dark', label: 'Dark Theme' },
-                      { value: 'light', label: 'Light Theme' },
-                      { value: 'auto', label: 'Auto (System)' }
-                    ]}
-                    defaultValue="dark"
-                    styles={{
-                      input: { backgroundColor: '#25262b', color: 'white' },
-                      label: { color: 'white' }
-                    }}
-                  />
+              {/* Additional Preferences */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Language & Currency Settings */}
+                <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+                  <Card.Section withBorder inheritPadding py="xs">
+                    <Text fw={500} size="lg" c="white">Language & Currency</Text>
+                  </Card.Section>
 
-                  <Select
-                    label="Language"
-                    placeholder="Select language"
-                    data={[
-                      { value: 'en', label: 'English' },
-                      { value: 'es', label: 'Spanish' },
-                      { value: 'fr', label: 'French' },
-                      { value: 'de', label: 'German' }
-                    ]}
-                    defaultValue="en"
-                    styles={{
-                      input: { backgroundColor: '#25262b', color: 'white' },
-                      label: { color: 'white' }
-                    }}
-                  />
+                  <div className="mt-4 space-y-4">
+                    <Select
+                      label="Language"
+                      placeholder="Select language"
+                      data={[
+                        { value: 'en', label: 'English' },
+                        { value: 'es', label: 'Spanish' },
+                        { value: 'fr', label: 'French' },
+                        { value: 'de', label: 'German' }
+                      ]}
+                      defaultValue="en"
+                      styles={{
+                        input: { backgroundColor: '#25262b', color: 'white' },
+                        label: { color: 'white' }
+                      }}
+                    />
 
-                  <Select
-                    label="Currency"
-                    placeholder="Select currency"
-                    data={[
-                      { value: 'usd', label: 'USD ($)' },
-                      { value: 'eur', label: 'EUR (€)' },
-                      { value: 'gbp', label: 'GBP (£)' },
-                      { value: 'jpy', label: 'JPY (¥)' }
-                    ]}
-                    defaultValue="usd"
-                    styles={{
-                      input: { backgroundColor: '#25262b', color: 'white' },
-                      label: { color: 'white' }
-                    }}
-                  />
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Text size="sm" fw={500} c="white">Compact Mode</Text>
-                      <Text size="xs" c="dimmed">Show more data in less space</Text>
-                    </div>
-                    <Switch color="green" />
+                    <Select
+                      label="Currency"
+                      placeholder="Select currency"
+                      data={[
+                        { value: 'usd', label: 'USD ($)' },
+                        { value: 'eur', label: 'EUR (€)' },
+                        { value: 'gbp', label: 'GBP (£)' },
+                        { value: 'jpy', label: 'JPY (¥)' }
+                      ]}
+                      defaultValue="usd"
+                      styles={{
+                        input: { backgroundColor: '#25262b', color: 'white' },
+                        label: { color: 'white' }
+                      }}
+                    />
                   </div>
-                </div>
-              </Card>
+                </Card>
 
-              {/* Trading Preferences */}
-              <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
-                <Card.Section withBorder inheritPadding py="xs">
-                  <Text fw={500} size="lg" c="white">Trading Preferences</Text>
-                </Card.Section>
+                {/* Trading Preferences */}
+                <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+                  <Card.Section withBorder inheritPadding py="xs">
+                    <Text fw={500} size="lg" c="white">Trading Preferences</Text>
+                  </Card.Section>
 
-                <div className="mt-4 space-y-4">
-                  <Select
-                    label="Default Order Type"
-                    placeholder="Select order type"
-                    data={[
-                      { value: 'market', label: 'Market Order' },
-                      { value: 'limit', label: 'Limit Order' },
-                      { value: 'stop', label: 'Stop Order' }
-                    ]}
-                    defaultValue="market"
-                    styles={{
-                      input: { backgroundColor: '#25262b', color: 'white' },
-                      label: { color: 'white' }
-                    }}
-                  />
+                  <div className="mt-4 space-y-4">
+                    <Select
+                      label="Default Order Type"
+                      placeholder="Select order type"
+                      data={[
+                        { value: 'market', label: 'Market Order' },
+                        { value: 'limit', label: 'Limit Order' },
+                        { value: 'stop', label: 'Stop Order' }
+                      ]}
+                      defaultValue="market"
+                      styles={{
+                        input: { backgroundColor: '#25262b', color: 'white' },
+                        label: { color: 'white' }
+                      }}
+                    />
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Text size="sm" fw={500} c="white">Confirm Orders</Text>
-                      <Text size="xs" c="dimmed">Show confirmation dialog for trades</Text>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Text size="sm" fw={500} c="white">Confirm Orders</Text>
+                        <Text size="xs" c="dimmed">Show confirmation dialog for trades</Text>
+                      </div>
+                      <Switch defaultChecked color="green" />
                     </div>
-                    <Switch defaultChecked color="green" />
-                  </div>
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Text size="sm" fw={500} c="white">Auto-refresh Data</Text>
-                      <Text size="xs" c="dimmed">Automatically refresh market data</Text>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Text size="sm" fw={500} c="white">Auto-refresh Data</Text>
+                        <Text size="xs" c="dimmed">Automatically refresh market data</Text>
+                      </div>
+                      <Switch defaultChecked color="green" />
                     </div>
-                    <Switch defaultChecked color="green" />
-                  </div>
 
-                  <Button color="green" mt="md">
-                    Save Preferences
-                  </Button>
-                </div>
-              </Card>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Text size="sm" fw={500} c="white">Compact Mode</Text>
+                        <Text size="xs" c="dimmed">Show more data in less space</Text>
+                      </div>
+                      <Switch color="green" />
+                    </div>
+
+                    <Button color="green" mt="md">
+                      Save Preferences
+                    </Button>
+                  </div>
+                </Card>
+              </div>
             </div>
           </Tabs.Panel>
         </Tabs>

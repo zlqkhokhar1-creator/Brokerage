@@ -10,7 +10,7 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   return (
-    <header className="bg-[#0f0f0f] border-b border-gray-700 px-4 py-3">
+    <header className="bg-card border-b border-border px-4 py-3 shadow-sm">
       <div className="flex items-center justify-between">
         {/* Mobile Menu Button */}
         <div className="flex items-center gap-4">
@@ -18,30 +18,30 @@ export function Header({ onMenuClick }: HeaderProps) {
             variant="ghost"
             size="icon"
             onClick={onMenuClick}
-            className="md:hidden"
+            className="md:hidden hover:bg-accent"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-5 w-5 text-muted-foreground" />
           </Button>
         </div>
 
         {/* Search Bar */}
         <div className="flex-1 max-w-md mx-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search stocks, news..."
-              className="pl-10 bg-[#1a1a1a] border-gray-600 text-white placeholder-gray-400"
+              className="pl-10 bg-background border-border text-foreground placeholder-muted-foreground focus:border-primary"
             />
           </div>
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
-            <Bell className="h-5 w-5" />
+          <Button variant="ghost" size="icon" className="hover:bg-accent">
+            <Bell className="h-5 w-5 text-muted-foreground" />
           </Button>
-          <Button variant="ghost" size="icon">
-            <User className="h-5 w-5" />
+          <Button variant="ghost" size="icon" className="hover:bg-accent">
+            <User className="h-5 w-5 text-muted-foreground" />
           </Button>
         </div>
       </div>

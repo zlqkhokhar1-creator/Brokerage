@@ -29,6 +29,101 @@ export default function TradingPage() {
           <Badge color="green" variant="light" size="lg">Market Open</Badge>
         </div>
 
+        {/* Advanced Trading Chart - Full Width */}
+        <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+          <Card.Section withBorder inheritPadding py="xs">
+            <Group justify="space-between">
+              <Text fw={500} size="lg" c="white">Advanced Trading Chart</Text>
+              <Badge color="blue" variant="light">Real-time Analysis</Badge>
+            </Group>
+          </Card.Section>
+
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <Text size="xl" fw={700} c="white">AAPL - Apple Inc.</Text>
+                <Text size="sm" c="dimmed">Live OHLCV data with technical indicators for informed trading decisions</Text>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
+                  1D
+                </Button>
+                <Button variant="outline" size="sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
+                  5D
+                </Button>
+                <Button variant="filled" size="sm" style={{ backgroundColor: 'hsl(var(--primary))' }}>
+                  1M
+                </Button>
+                <Button variant="outline" size="sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
+                  3M
+                </Button>
+                <Button variant="outline" size="sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
+                  1Y
+                </Button>
+              </div>
+            </div>
+
+            {/* Chart Container */}
+            <div className="h-96 bg-card rounded-lg border relative overflow-hidden mb-4" style={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center">
+                  <BarChart3 className="h-20 w-20 mx-auto mb-4" style={{ color: 'hsl(var(--primary))' }} />
+                  <h3 className="text-xl font-semibold mb-2" style={{ color: 'hsl(var(--foreground))' }}>
+                    Interactive Trading Chart
+                  </h3>
+                  <p className="text-sm mb-4" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                    Professional candlestick chart with advanced technical analysis
+                  </p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    <Badge variant="secondary">Candlestick</Badge>
+                    <Badge variant="secondary">Technical Indicators</Badge>
+                    <Badge variant="secondary">Volume Analysis</Badge>
+                    <Badge variant="secondary">Order Flow</Badge>
+                    <Badge variant="secondary">Real-time</Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Technical Indicators Panel */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+              <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
+                <Text size="xs" c="dimmed">Price</Text>
+                <Text size="lg" fw={700} c="white">$175.43</Text>
+                <Text size="xs" c="green">+3.45%</Text>
+              </div>
+              <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
+                <Text size="xs" c="dimmed">SMA (20)</Text>
+                <Text size="lg" fw={700} c="white">172.89</Text>
+                <Text size="xs" c="green">Bullish</Text>
+              </div>
+              <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
+                <Text size="xs" c="dimmed">RSI (14)</Text>
+                <Text size="lg" fw={700} c="white">67.8</Text>
+                <Text size="xs" c="orange">Neutral</Text>
+              </div>
+              <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
+                <Text size="xs" c="dimmed">MACD</Text>
+                <Text size="lg" fw={700} c="white">+1.23</Text>
+                <Text size="xs" c="green">Buy Signal</Text>
+              </div>
+              <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
+                <Text size="xs" c="dimmed">Volume</Text>
+                <Text size="lg" fw={700} c="white">45.2M</Text>
+                <Text size="xs" c="blue">High</Text>
+              </div>
+            </div>
+
+            {/* Trading Signals */}
+            <div className="flex flex-wrap gap-2">
+              <Badge color="green" variant="light" size="lg">Strong Buy Signal</Badge>
+              <Badge color="blue" variant="light">Volume Confirmation</Badge>
+              <Badge color="orange" variant="light">RSI Neutral</Badge>
+              <Badge color="purple" variant="light">MACD Bullish</Badge>
+            </div>
+          </div>
+        </Card>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Order Form */}
           <div className="lg:col-span-1">
