@@ -1,7 +1,7 @@
 'use client';
 
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { Card, Text, Group, Badge, Progress, SimpleGrid, Tabs } from '@mantine/core';
+import { Card, Text, Group, Badge, Progress, SimpleGrid, Tabs, Button } from '@mantine/core';
 import { TrendingUp, TrendingDown, DollarSign, PieChart, Target, Calendar } from 'lucide-react';
 
 const portfolioData = {
@@ -160,27 +160,112 @@ export default function PortfolioPage() {
           </Tabs.Panel>
 
           <Tabs.Panel value="performance" pt="xl">
-            <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
-              <Text fw={500} size="lg" c="white" mb="lg">Performance Metrics</Text>
-              <SimpleGrid cols={2} spacing="lg">
-                <div>
-                  <Text size="sm" c="dimmed">Sharpe Ratio</Text>
-                  <Text size="xl" fw={700} c="green">1.45</Text>
+            <div className="space-y-6">
+              {/* Portfolio Performance Chart */}
+              <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+                <Card.Section withBorder inheritPadding py="xs">
+                  <Group justify="space-between">
+                    <Text fw={500} size="lg" c="white">Portfolio Performance Chart</Text>
+                    <Badge color="green" variant="light">+14.02% YTD</Badge>
+                  </Group>
+                </Card.Section>
+
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <Text size="lg" fw={600} c="white">Total Portfolio Value</Text>
+                      <Text size="sm" c="dimmed">Historical performance with benchmark comparison</Text>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
+                        1M
+                      </Button>
+                      <Button variant="outline" size="sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
+                        3M
+                      </Button>
+                      <Button variant="filled" size="sm" style={{ backgroundColor: 'hsl(var(--primary))' }}>
+                        1Y
+                      </Button>
+                      <Button variant="outline" size="sm" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}>
+                        5Y
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Chart Container */}
+                  <div className="h-80 bg-card rounded-lg border relative overflow-hidden mb-4" style={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <TrendingUp className="h-16 w-16 mx-auto mb-4" style={{ color: 'hsl(var(--primary))' }} />
+                        <h3 className="text-lg font-semibold mb-2" style={{ color: 'hsl(var(--foreground))' }}>
+                          Portfolio Performance Chart
+                        </h3>
+                        <p className="text-sm mb-4" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                          Track your portfolio's growth over time with benchmark comparison
+                        </p>
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          <Badge variant="secondary">Portfolio Value</Badge>
+                          <Badge variant="secondary">S&P 500 Benchmark</Badge>
+                          <Badge variant="secondary">Historical Returns</Badge>
+                          <Badge variant="secondary">Risk Metrics</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Performance Summary */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
+                      <Text size="xs" c="dimmed">1M Return</Text>
+                      <Text size="lg" fw={700} c="green">+2.45%</Text>
+                      <Text size="xs" c="green">vs +1.23% S&P</Text>
+                    </div>
+                    <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
+                      <Text size="xs" c="dimmed">3M Return</Text>
+                      <Text size="lg" fw={700} c="green">+7.89%</Text>
+                      <Text size="xs" c="green">vs +5.67% S&P</Text>
+                    </div>
+                    <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
+                      <Text size="xs" c="dimmed">1Y Return</Text>
+                      <Text size="lg" fw={700} c="green">+14.02%</Text>
+                      <Text size="xs" c="green">vs +11.45% S&P</Text>
+                    </div>
+                    <div className="text-center p-3 border rounded" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' }}>
+                      <Text size="xs" c="dimmed">5Y Return</Text>
+                      <Text size="lg" fw={700} c="green">+67.34%</Text>
+                      <Text size="xs" c="green">vs +58.92% S&P</Text>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Text size="sm" c="dimmed">Max Drawdown</Text>
-                  <Text size="xl" fw={700} c="red">-8.23%</Text>
-                </div>
-                <div>
-                  <Text size="sm" c="dimmed">Volatility</Text>
-                  <Text size="xl" fw={700} c="white">12.45%</Text>
-                </div>
-                <div>
-                  <Text size="sm" c="dimmed">Beta</Text>
-                  <Text size="xl" fw={700} c="white">0.87</Text>
-                </div>
-              </SimpleGrid>
-            </Card>
+              </Card>
+
+              {/* Performance Metrics */}
+              <Card shadow="sm" padding="lg" radius="md" withBorder style={{ backgroundColor: '#1a1a1a' }}>
+                <Text fw={500} size="lg" c="white" mb="lg">Risk & Performance Metrics</Text>
+                <SimpleGrid cols={{ base: 2, md: 4 }} spacing="lg">
+                  <div>
+                    <Text size="sm" c="dimmed">Sharpe Ratio</Text>
+                    <Text size="xl" fw={700} c="green">1.45</Text>
+                    <Text size="xs" c="dimmed">Risk-adjusted returns</Text>
+                  </div>
+                  <div>
+                    <Text size="sm" c="dimmed">Max Drawdown</Text>
+                    <Text size="xl" fw={700} c="red">-8.23%</Text>
+                    <Text size="xs" c="dimmed">Peak to trough decline</Text>
+                  </div>
+                  <div>
+                    <Text size="sm" c="dimmed">Volatility</Text>
+                    <Text size="xl" fw={700} c="white">12.45%</Text>
+                    <Text size="xs" c="dimmed">Annualized standard deviation</Text>
+                  </div>
+                  <div>
+                    <Text size="sm" c="dimmed">Beta</Text>
+                    <Text size="xl" fw={700} c="white">0.87</Text>
+                    <Text size="xs" c="dimmed">Market correlation</Text>
+                  </div>
+                </SimpleGrid>
+              </Card>
+            </div>
           </Tabs.Panel>
         </Tabs>
       </div>
