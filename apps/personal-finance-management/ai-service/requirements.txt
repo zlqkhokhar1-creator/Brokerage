@@ -1,0 +1,63 @@
+# AI/ML Service Dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+python-multipart==0.0.6
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-dotenv==1.0.0
+
+# Machine Learning
+scikit-learn==1.3.2
+pandas==2.1.4
+numpy==1.25.2
+scipy==1.11.4
+
+# Deep Learning
+torch==2.1.1
+transformers==4.36.2
+sentence-transformers==2.2.2
+
+# Computer Vision
+opencv-python==4.8.1.78
+Pillow==10.1.0
+easyocr==1.7.0
+pytesseract==0.3.10
+
+# Natural Language Processing
+spacy==3.7.2
+nltk==3.8.1
+textblob==0.17.1
+langdetect==1.0.9
+
+# Data Processing
+requests==2.31.0
+aiohttp==3.9.1
+httpx==0.25.2
+beautifulsoup4==4.12.2
+lxml==4.9.3
+
+# Database
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+redis==5.0.1
+
+# Utilities
+python-dateutil==2.8.2
+pytz==2023.3
+schedule==1.2.0
+celery==5.3.4
+
+# Monitoring & Logging
+prometheus-client==0.19.0
+structlog==23.2.0
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# Development
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1
