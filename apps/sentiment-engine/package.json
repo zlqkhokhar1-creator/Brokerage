@@ -1,0 +1,56 @@
+{
+  "name": "sentiment-engine",
+  "version": "1.0.0",
+  "description": "Real-Time Market Sentiment Engine for Brokerage Platform",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4",
+    "redis": "^4.6.10",
+    "axios": "^1.6.0",
+    "node-cron": "^3.0.3",
+    "winston": "^3.11.0",
+    "joi": "^17.11.0",
+    "helmet": "^7.1.0",
+    "cors": "^2.8.5",
+    "compression": "^1.7.4",
+    "express-rate-limit": "^7.1.5",
+    "pg": "^8.11.3",
+    "ioredis": "^5.3.2",
+    "natural": "^6.7.0",
+    "sentiment": "^5.0.2",
+    "newsapi": "^2.4.0",
+    "twitter-api-v2": "^1.15.0",
+    "youtube-api": "^1.0.1",
+    "reddit": "^1.0.1",
+    "ws": "^8.14.2",
+    "uuid": "^9.0.1",
+    "moment": "^2.29.4",
+    "lodash": "^4.17.21",
+    "bull": "^4.12.2",
+    "ioredis": "^5.3.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "eslint": "^8.53.0"
+  },
+  "keywords": [
+    "sentiment",
+    "market",
+    "real-time",
+    "brokerage",
+    "fintech"
+  ],
+  "author": "Brokerage Platform Team",
+  "license": "MIT"
+}

@@ -20,13 +20,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       />
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col min-w-0 pb-9">
+      <div className="flex-1 flex flex-col min-w-0 pb-9 md:pb-0">
         {/* Header - fixed at top */}
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         {/* Page content - scrollable area below header */}
-        <main className="flex-1 bg-background overflow-auto scrollbar-professional">
-          <div className="page-spacing">
+        <main className="flex-1 bg-gradient-mesh bg-noise overflow-auto scrollbar-professional relative">
+          {/* Subtle gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-background/80 via-background/60 to-background/80 pointer-events-none"></div>
+
+          <div className="page-spacing relative z-10 max-w-full">
             {children}
           </div>
         </main>

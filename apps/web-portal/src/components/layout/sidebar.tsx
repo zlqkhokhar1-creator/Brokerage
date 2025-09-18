@@ -34,18 +34,40 @@ interface SidebarProps {
 function MarketStatusFooter() {
   const [currentTime, setCurrentTime] = useState('');
   const [marketStatus, setMarketStatus] = useState('Open');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Set initial time
-    setCurrentTime(new Date().toLocaleTimeString());
+    setMounted(true);
+
+    // Only set time on client after hydration
+    const updateTime = () => {
+      setCurrentTime(new Date().toLocaleTimeString());
+    };
+
+    updateTime();
 
     // Update time every second
-    const interval = setInterval(() => {
-      setCurrentTime(new Date().toLocaleTimeString());
-    }, 1000);
+    const interval = setInterval(updateTime, 1000);
 
     return () => clearInterval(interval);
   }, []);
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-muted-foreground">Market Status</span>
+          <Badge variant="success" size="sm">
+            Open
+          </Badge>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">

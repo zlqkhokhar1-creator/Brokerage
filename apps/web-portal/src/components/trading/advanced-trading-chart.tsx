@@ -32,14 +32,20 @@ export function AdvancedTradingChart({ symbol, height = 400 }: AdvancedTradingCh
     bollinger: false
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
-  // Generate mock candlestick data
+  // Generate mock candlestick data - client side only
   useEffect(() => {
+    setMounted(true);
+
+    // Only generate data on client side to prevent hydration mismatch
+    if (!mounted) return;
+
     const generateMockData = () => {
       const data: CandleData[] = [];
       const basePrice = 175.43;
       let currentPrice = basePrice;
-      
+
       for (let i = 0; i < 100; i++) {
         const change = (Math.random() - 0.5) * 2;
         const open = currentPrice;
@@ -47,7 +53,7 @@ export function AdvancedTradingChart({ symbol, height = 400 }: AdvancedTradingCh
         const high = Math.max(open, close) + Math.random() * 0.5;
         const low = Math.min(open, close) - Math.random() * 0.5;
         const volume = Math.floor(Math.random() * 1000000) + 100000;
-        
+
         data.push({
           time: Date.now() - (100 - i) * 60000, // 1 minute intervals
           open,
@@ -56,16 +62,35 @@ export function AdvancedTradingChart({ symbol, height = 400 }: AdvancedTradingCh
           close,
           volume
         });
-        
+
         currentPrice = close;
       }
-      
+
       setCandleData(data);
       setIsLoading(false);
     };
 
     generateMockData();
-  }, [symbol]);
+  }, [symbol, mounted]);
+
+  // Show loading state until mounted
+  if (!mounted || isLoading) {
+    return (
+      <Card className="card-professional">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Advanced Chart - {symbol}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center" style={{ height }}>
+            <div className="animate-pulse text-muted-foreground">Loading chart...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const calculateSMA = (data: CandleData[], period: number) => {
     const sma: number[] = [];

@@ -4,14 +4,16 @@ import { cn } from "@/lib/utils"
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & {
-    variant?: "default" | "elevated" | "subtle" | "outlined"
+    variant?: "default" | "elevated" | "subtle" | "outlined" | "glass" | "gradient"
   }
 >(({ className, variant = "default", ...props }, ref) => {
   const variantClasses = {
-    default: "bg-card text-card-foreground shadow-sm border border-border",
-    elevated: "bg-card text-card-foreground shadow-lg border border-border hover:shadow-xl transition-shadow duration-200",
-    subtle: "bg-muted text-foreground shadow-sm border border-border/50",
-    outlined: "bg-transparent text-foreground border-2 border-border hover:border-primary/50 transition-colors duration-200"
+    default: "bg-card text-card-foreground shadow-sm border border-border hover:shadow-md transition-all duration-200",
+    elevated: "bg-card text-card-foreground shadow-lg border border-border hover:shadow-xl hover:-translate-y-1 transition-all duration-200",
+    subtle: "bg-muted/50 text-foreground shadow-sm border border-border/50 backdrop-blur-sm",
+    outlined: "bg-transparent text-foreground border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all duration-200",
+    glass: "bg-background/80 text-foreground shadow-lg border border-border/50 backdrop-blur-xl hover:bg-background/90 transition-all duration-200",
+    gradient: "bg-gradient-to-br from-primary/10 via-primary/5 to-background text-foreground shadow-md border border-primary/20 hover:shadow-lg hover:shadow-primary/10 transition-all duration-200"
   }
 
   return (

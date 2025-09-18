@@ -216,54 +216,72 @@ const availableThemes: Theme[] = [
 // Apply theme to CSS variables
 const applyThemeToCSS = (theme: Theme) => {
   if (typeof window === 'undefined') return;
-  
+
   const root = document.documentElement;
 
-  // Apply primary color (use primary-500 as main primary)
-  root.style.setProperty('--primary', theme.colors.primary[500]);
-  root.style.setProperty('--primary-foreground', '#ffffff');
+  // Force style recalculation by removing and re-adding data-theme
+  root.removeAttribute('data-theme');
 
-  // Apply background and foreground
-  root.style.setProperty('--background', theme.colors.gray[50]);
-  root.style.setProperty('--foreground', theme.colors.gray[900]);
+  // Use requestAnimationFrame to ensure DOM is ready
+  requestAnimationFrame(() => {
+    // Apply primary color (use primary-500 as main primary)
+    root.style.setProperty('--primary', theme.colors.primary[500]);
+    root.style.setProperty('--primary-foreground', '#ffffff');
 
-  // Apply card colors
-  root.style.setProperty('--card', theme.colors.gray[50]);
-  root.style.setProperty('--card-foreground', theme.colors.gray[900]);
+    // Apply background and foreground
+    root.style.setProperty('--background', theme.colors.gray[50]);
+    root.style.setProperty('--foreground', theme.colors.gray[900]);
 
-  // Apply secondary colors
-  root.style.setProperty('--secondary', theme.colors.gray[100]);
-  root.style.setProperty('--secondary-foreground', theme.colors.gray[900]);
+    // Apply card colors
+    root.style.setProperty('--card', theme.colors.gray[50]);
+    root.style.setProperty('--card-foreground', theme.colors.gray[900]);
 
-  // Apply muted colors
-  root.style.setProperty('--muted', theme.colors.gray[100]);
-  root.style.setProperty('--muted-foreground', theme.colors.gray[600]);
+    // Apply secondary colors
+    root.style.setProperty('--secondary', theme.colors.gray[100]);
+    root.style.setProperty('--secondary-foreground', theme.colors.gray[900]);
 
-  // Apply accent colors
-  root.style.setProperty('--accent', theme.colors.gray[200]);
-  root.style.setProperty('--accent-foreground', theme.colors.gray[900]);
+    // Apply muted colors
+    root.style.setProperty('--muted', theme.colors.gray[100]);
+    root.style.setProperty('--muted-foreground', theme.colors.gray[600]);
 
-  // Apply border and input colors
-  root.style.setProperty('--border', theme.colors.gray[200]);
-  root.style.setProperty('--input', theme.colors.gray[200]);
-  root.style.setProperty('--ring', theme.colors.primary[500]);
+    // Apply accent colors
+    root.style.setProperty('--accent', theme.colors.gray[200]);
+    root.style.setProperty('--accent-foreground', theme.colors.gray[900]);
 
-  // Apply semantic colors
-  root.style.setProperty('--success', theme.colors.success);
-  root.style.setProperty('--warning', theme.colors.warning);
-  root.style.setProperty('--error', theme.colors.error);
-  root.style.setProperty('--info', theme.colors.info);
+    // Apply border and input colors
+    root.style.setProperty('--border', theme.colors.gray[200]);
+    root.style.setProperty('--input', theme.colors.gray[200]);
+    root.style.setProperty('--ring', theme.colors.primary[500]);
 
-  // Apply popover colors (same as card)
-  root.style.setProperty('--popover', theme.colors.gray[50]);
-  root.style.setProperty('--popover-foreground', theme.colors.gray[900]);
+    // Apply semantic colors
+    root.style.setProperty('--success', theme.colors.success);
+    root.style.setProperty('--warning', theme.colors.warning);
+    root.style.setProperty('--error', theme.colors.error);
+    root.style.setProperty('--info', theme.colors.info);
 
-  // Apply destructive colors
-  root.style.setProperty('--destructive', theme.colors.error);
-  root.style.setProperty('--destructive-foreground', '#ffffff');
+    // Apply popover colors (same as card)
+    root.style.setProperty('--popover', theme.colors.gray[50]);
+    root.style.setProperty('--popover-foreground', theme.colors.gray[900]);
 
-  // Apply to document for immediate effect
-  root.setAttribute('data-theme', theme.id);
+    // Apply destructive colors
+    root.style.setProperty('--destructive', theme.colors.error);
+    root.style.setProperty('--destructive-foreground', '#ffffff');
+
+    // Apply to document for immediate effect
+    root.setAttribute('data-theme', theme.id);
+
+    // Force a style recalculation
+    root.style.display = 'none';
+    root.offsetHeight; // Trigger reflow
+    root.style.display = '';
+
+    // Debug logging
+    console.log('Theme applied:', theme.id, {
+      primary: theme.colors.primary[500],
+      background: theme.colors.gray[50],
+      foreground: theme.colors.gray[900]
+    });
+  });
 };
 
 // Create the store with persistence
@@ -292,8 +310,23 @@ export const useThemeStore = create<ThemeStore>()(
   )
 );
 
-// Initialize theme on app start
+// Initialize theme on app start - only on client side
 if (typeof window !== 'undefined') {
+  // Immediate initialization for critical CSS variables
   const store = useThemeStore.getState();
   applyThemeToCSS(store.currentTheme);
+
+  // Also set up a more delayed initialization to ensure everything is ready
+  setTimeout(() => {
+    const store = useThemeStore.getState();
+    applyThemeToCSS(store.currentTheme);
+  }, 100);
+
+  // Listen for theme changes and reapply
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'invest-pro-theme') {
+      const store = useThemeStore.getState();
+      applyThemeToCSS(store.currentTheme);
+    }
+  });
 }

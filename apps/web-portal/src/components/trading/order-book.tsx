@@ -25,33 +25,39 @@ interface OrderBookData {
 export function OrderBook({ symbol }: OrderBookProps) {
   const [orderBookData, setOrderBookData] = useState<OrderBookData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+
+    // Only generate data on client side to prevent hydration mismatch
+    if (!mounted) return;
+
     const generateMockOrderBook = () => {
       const lastPrice = 175.43;
       const spread = 0.01;
-      
+
       const bids: OrderBookEntry[] = [];
       const asks: OrderBookEntry[] = [];
-      
+
       // Generate bid orders (below last price)
       for (let i = 0; i < 10; i++) {
         const price = lastPrice - (i + 1) * 0.01;
         const size = Math.floor(Math.random() * 10000) + 1000;
         const orders = Math.floor(Math.random() * 20) + 1;
-        
+
         bids.push({ price, size, orders });
       }
-      
+
       // Generate ask orders (above last price)
       for (let i = 0; i < 10; i++) {
         const price = lastPrice + (i + 1) * 0.01;
         const size = Math.floor(Math.random() * 10000) + 1000;
         const orders = Math.floor(Math.random() * 20) + 1;
-        
+
         asks.push({ price, size, orders });
       }
-      
+
       setOrderBookData({
         bids: bids.sort((a, b) => b.price - a.price),
         asks: asks.sort((a, b) => a.price - b.price),
@@ -62,11 +68,30 @@ export function OrderBook({ symbol }: OrderBookProps) {
     };
 
     generateMockOrderBook();
-    
+
     // Update every 2 seconds
     const interval = setInterval(generateMockOrderBook, 2000);
     return () => clearInterval(interval);
-  }, [symbol]);
+  }, [symbol, mounted]);
+
+  // Show loading state until mounted
+  if (!mounted || isLoading) {
+    return (
+      <Card className="card-professional">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Order Book - {symbol}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="animate-pulse text-muted-foreground">Loading order book...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return (

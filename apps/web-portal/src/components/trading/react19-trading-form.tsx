@@ -21,16 +21,21 @@ export function React19TradingForm({ symbol, currentPrice }: TradingFormProps) {
     async (prevState: any, formData: FormData) => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       const action = formData.get('action') as string;
       const symbol = formData.get('symbol') as string;
       const quantity = formData.get('quantity') as string;
-      
+
+      // Generate timestamp on client side only
+      const timestamp = typeof window !== 'undefined'
+        ? new Date().toISOString()
+        : new Date().toISOString(); // Fallback
+
       return {
         lastAction: action,
         lastSymbol: symbol,
         lastQuantity: quantity,
-        timestamp: new Date().toISOString(),
+        timestamp,
         success: true,
       };
     },
@@ -43,7 +48,7 @@ export function React19TradingForm({ symbol, currentPrice }: TradingFormProps) {
     }
   );
   
-  // Optimistic updates for better UX
+  // Optimistic updates for better UX - client side only
   const { optimisticData, addOptimistic } = useOptimisticUpdate(
     { price: currentPrice, lastUpdate: new Date() },
     (current, optimistic) => optimistic
@@ -51,9 +56,14 @@ export function React19TradingForm({ symbol, currentPrice }: TradingFormProps) {
 
   // Add optimistic update when form is submitted
   const handleFormSubmit = () => {
+    // Generate timestamp on client side only
+    const lastUpdate = typeof window !== 'undefined'
+      ? new Date()
+      : new Date(); // Fallback
+
     addOptimistic({
       price: currentPrice + (action === 'buy' ? 0.01 : -0.01),
-      lastUpdate: new Date(),
+      lastUpdate,
     });
   };
 

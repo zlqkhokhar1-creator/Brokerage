@@ -50,18 +50,18 @@ export function Header({ onMenuClick }: HeaderProps) {
         </div>
 
         {/* Search Bar */}
-        <div className="flex-1 max-w-lg mx-6">
+        <div className="flex-1 max-w-lg mx-4 md:mx-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search stocks, news, or symbols..."
-              className="pl-10 bg-background border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary/20"
+              className="pl-10 bg-background border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary/20 w-full"
             />
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           {/* Theme Selector */}
           <div className="relative">
             <Button 

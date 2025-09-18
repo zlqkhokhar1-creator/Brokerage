@@ -130,7 +130,9 @@ export function TradingJournal({ userId }: TradingJournalProps) {
     mutationFn: async (trade: Partial<Trade>) => {
       // Mock API call - replace with actual implementation
       await new Promise(resolve => setTimeout(resolve, 1000));
-      return { ...trade, id: Date.now().toString() };
+      // Generate ID on client side only
+      const clientId = typeof window !== 'undefined' ? Date.now().toString() : Math.random().toString();
+      return { ...trade, id: clientId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trades', userId] });
@@ -164,15 +166,20 @@ export function TradingJournal({ userId }: TradingJournalProps) {
 
   const handleAddTrade = () => {
     if (!newTrade.symbol || !newTrade.quantity || !newTrade.entryPrice) return;
-    
+
+    // Generate date on client side only to prevent hydration mismatch
+    const currentDate = typeof window !== 'undefined'
+      ? new Date().toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0]; // Fallback for SSR
+
     const trade: Partial<Trade> = {
       ...newTrade,
-      entryDate: new Date().toISOString().split('T')[0],
+      entryDate: currentDate,
       status: 'OPEN',
       pnl: 0,
       pnlPercent: 0
     };
-    
+
     addTradeMutation.mutate(trade);
   };
 
