@@ -1,91 +1,178 @@
 const Joi = require('joi');
-const { logger } = require('../utils/logger');
+const logger = require('../utils/logger');
 
-// Validation schemas
-const schemas = {
-  authentication: Joi.object({
-    username: Joi.string().required().min(1).max(255),
-    password: Joi.string().required().min(8).max(255),
-    mfaToken: Joi.string().optional().length(6),
-    deviceInfo: Joi.object({
-      type: Joi.string().valid('web', 'mobile', 'desktop').optional(),
-      id: Joi.string().optional(),
-      ipAddress: Joi.string().ip().optional(),
-      userAgent: Joi.string().optional()
-    }).optional()
-  }),
-
-  authorization: Joi.object({
-    resource: Joi.string().required().min(1).max(255),
-    action: Joi.string().required().min(1).max(255),
-    context: Joi.object().optional()
-  }),
-
-  policyCreation: Joi.object({
-    name: Joi.string().required().min(1).max(255),
-    description: Joi.string().optional().max(1000),
-    rules: Joi.array().items(Joi.object()).optional(),
-    conditions: Joi.array().items(Joi.object()).optional()
-  }),
-
-  threatAnalysis: Joi.object({
-    data: Joi.any().required(),
-    analysisType: Joi.string().valid('pattern', 'behavioral', 'statistical', 'network', 'temporal').required(),
-    parameters: Joi.object().optional()
-  }),
-
-  incidentCreation: Joi.object({
-    title: Joi.string().required().min(1).max(255),
-    description: Joi.string().required().min(1).max(2000),
-    severity: Joi.string().valid('low', 'medium', 'high', 'critical').required(),
-    category: Joi.string().valid('security', 'system', 'network', 'application').required(),
-    affectedSystems: Joi.array().items(Joi.string()).optional()
-  }),
-
-  segmentationPolicy: Joi.object({
-    name: Joi.string().required().min(1).max(255),
-    description: Joi.string().optional().max(1000),
-    rules: Joi.array().items(Joi.object()).optional(),
-    networkConfig: Joi.object().optional()
-  })
-};
-
-// Validation middleware factory
-const validate = (schema) => {
+const validateRequest = (schema) => {
   return (req, res, next) => {
-    try {
-      const { error, value } = schema.validate(req.body, { abortEarly: false });
-      
-      if (error) {
-        const errorDetails = error.details.map(detail => ({
-          field: detail.path.join('.'),
-          message: detail.message,
-          value: detail.context?.value
-        }));
-        
-        logger.warn('Validation failed', {
-          path: req.path,
-          method: req.method,
-          errors: errorDetails
-        });
-        
-        return res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errorDetails
-        });
-      }
-      
-      req.body = value;
-      next();
-    } catch (error) {
-      logger.error('Validation middleware error:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Internal server error'
+    const { error } = schema.validate(req.body);
+    if (error) {
+      logger.error('Validation error:', error.details[0].message);
+      return res.status(400).json({ 
+        error: 'Validation error', 
+        details: error.details[0].message 
       });
     }
+    next();
   };
 };
 
-module.exports = { validate, schemas };
+const validateQuery = (schema) => {
+  return (req, res, next) => {
+    const { error } = schema.validate(req.query);
+    if (error) {
+      logger.error('Query validation error:', error.details[0].message);
+      return res.status(400).json({ 
+        error: 'Query validation error', 
+        details: error.details[0].message 
+      });
+    }
+    next();
+  };
+};
+
+const validateParams = (schema) => {
+  return (req, res, next) => {
+    const { error } = schema.validate(req.params);
+    if (error) {
+      logger.error('Params validation error:', error.details[0].message);
+      return res.status(400).json({ 
+        error: 'Params validation error', 
+        details: error.details[0].message 
+      });
+    }
+    next();
+  };
+};
+
+// Authentication validation schemas
+const authenticateUserSchema = Joi.object({
+  username: Joi.string().required().min(3).max(50),
+  password: Joi.string().required().min(8),
+  deviceId: Joi.string().required().uuid(),
+  location: Joi.string().optional().max(100)
+});
+
+// Authorization validation schemas
+const authorizeRequestSchema = Joi.object({
+  resource: Joi.string().required().max(100),
+  action: Joi.string().required().max(50),
+  userId: Joi.string().required().uuid(),
+  context: Joi.object().optional()
+});
+
+// Threat detection validation schemas
+const detectThreatsSchema = Joi.object({
+  userId: Joi.string().required().uuid(),
+  activity: Joi.object().required(),
+  context: Joi.object().optional()
+});
+
+// Identity verification validation schemas
+const verifyIdentitySchema = Joi.object({
+  userId: Joi.string().required().uuid(),
+  verificationType: Joi.string().required().valid('biometric', 'document', 'multi_factor', 'behavioral'),
+  verificationData: Joi.object().required()
+});
+
+// Security profile validation schemas
+const createSecurityProfileSchema = Joi.object({
+  userId: Joi.string().required().uuid(),
+  securityLevel: Joi.string().required().valid('low', 'medium', 'high', 'critical'),
+  networkSegments: Joi.array().items(Joi.string()).required(),
+  dataAccessLevel: Joi.string().required().valid('public', 'internal', 'confidential', 'restricted', 'top_secret'),
+  applicationAccess: Joi.array().items(Joi.string()).required(),
+  restrictions: Joi.object().optional()
+});
+
+const updateSecurityProfileSchema = Joi.object({
+  securityLevel: Joi.string().optional().valid('low', 'medium', 'high', 'critical'),
+  networkSegments: Joi.array().items(Joi.string()).optional(),
+  dataAccessLevel: Joi.string().optional().valid('public', 'internal', 'confidential', 'restricted', 'top_secret'),
+  applicationAccess: Joi.array().items(Joi.string()).optional(),
+  restrictions: Joi.object().optional()
+});
+
+// Permission management validation schemas
+const grantPermissionSchema = Joi.object({
+  userId: Joi.string().required().uuid(),
+  resource: Joi.string().required().max(100),
+  action: Joi.string().required().max(50),
+  conditions: Joi.object().optional()
+});
+
+const revokePermissionSchema = Joi.object({
+  userId: Joi.string().required().uuid(),
+  resource: Joi.string().required().max(100),
+  action: Joi.string().required().max(50)
+});
+
+// Security event validation schemas
+const getSecurityEventsSchema = Joi.object({
+  userId: Joi.string().optional().uuid(),
+  eventType: Joi.string().optional().max(50),
+  severity: Joi.string().optional().valid('low', 'medium', 'high', 'critical'),
+  startDate: Joi.date().optional(),
+  endDate: Joi.date().optional(),
+  page: Joi.number().integer().min(1).optional(),
+  limit: Joi.number().integer().min(1).max(100).optional()
+});
+
+const securityEventIdSchema = Joi.object({
+  id: Joi.string().required().uuid()
+});
+
+// User management validation schemas
+const createUserSchema = Joi.object({
+  username: Joi.string().required().min(3).max(50),
+  email: Joi.string().required().email(),
+  password: Joi.string().required().min(8),
+  role: Joi.string().required().valid('admin', 'user', 'viewer'),
+  securityLevel: Joi.string().optional().valid('low', 'medium', 'high', 'critical')
+});
+
+const updateUserSchema = Joi.object({
+  username: Joi.string().optional().min(3).max(50),
+  email: Joi.string().optional().email(),
+  role: Joi.string().optional().valid('admin', 'user', 'viewer'),
+  securityLevel: Joi.string().optional().valid('low', 'medium', 'high', 'critical'),
+  isActive: Joi.boolean().optional()
+});
+
+const userIdSchema = Joi.object({
+  id: Joi.string().required().uuid()
+});
+
+module.exports = {
+  validateRequest,
+  validateQuery,
+  validateParams,
+  
+  // Authentication validators
+  authenticateUser: validateRequest(authenticateUserSchema),
+  
+  // Authorization validators
+  authorizeRequest: validateRequest(authorizeRequestSchema),
+  
+  // Threat detection validators
+  detectThreats: validateRequest(detectThreatsSchema),
+  
+  // Identity verification validators
+  verifyIdentity: validateRequest(verifyIdentitySchema),
+  
+  // Security profile validators
+  createSecurityProfile: validateRequest(createSecurityProfileSchema),
+  updateSecurityProfile: validateRequest(updateSecurityProfileSchema),
+  
+  // Permission management validators
+  grantPermission: validateRequest(grantPermissionSchema),
+  revokePermission: validateRequest(revokePermissionSchema),
+  
+  // Security event validators
+  getSecurityEvents: validateQuery(getSecurityEventsSchema),
+  getSecurityEvent: validateParams(securityEventIdSchema),
+  
+  // User management validators
+  createUser: validateRequest(createUserSchema),
+  updateUser: validateRequest(updateUserSchema),
+  getUser: validateParams(userIdSchema),
+  deleteUser: validateParams(userIdSchema)
+};

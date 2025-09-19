@@ -1,69 +1,50 @@
 const { Pool } = require('pg');
-const { logger } = require('./logger');
+const logger = require('../utils/logger');
 
-let pool = null;
+const pool = new Pool({
+  user: process.env.DB_USER || 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  database: process.env.DB_NAME || 'brokerage',
+  password: process.env.DB_PASSWORD || 'password',
+  port: process.env.DB_PORT || 5432,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
 
-const connectDatabase = async () => {
+pool.on('connect', () => {
+  logger.info('Connected to PostgreSQL database');
+});
+
+pool.on('error', (err) => {
+  logger.error('Unexpected error on idle client', err);
+  process.exit(-1);
+});
+
+const query = async (text, params) => {
+  const start = Date.now();
   try {
-    if (pool) {
-      return pool;
-    }
-
-    pool = new Pool({
-      user: process.env.DB_USER || 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      database: process.env.DB_NAME || 'brokerage',
-      password: process.env.DB_PASSWORD || 'password',
-      port: process.env.DB_PORT || 5432,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    });
-
-    pool.on('connect', () => {
-      logger.info('Database connected successfully');
-    });
-
-    pool.on('error', (err) => {
-      logger.error('Unexpected error on idle client', err);
-    });
-
-    // Test the connection
-    const client = await pool.connect();
-    await client.query('SELECT NOW()');
-    client.release();
-
-    logger.info('Database connection established');
-    return pool;
+    const res = await pool.query(text, params);
+    const duration = Date.now() - start;
+    logger.debug('Executed query', { text, duration, rows: res.rowCount });
+    return res;
   } catch (error) {
-    logger.error('Failed to connect to database:', error);
+    logger.error('Database query error', { text, error: error.message });
     throw error;
   }
 };
 
-const getPool = () => {
-  if (!pool) {
-    throw new Error('Database pool not initialized. Call connectDatabase() first.');
-  }
-  return pool;
+const getClient = async () => {
+  return await pool.connect();
 };
 
-const closeDatabase = async () => {
-  try {
-    if (pool) {
-      await pool.end();
-      pool = null;
-      logger.info('Database connection closed');
-    }
-  } catch (error) {
-    logger.error('Error closing database connection:', error);
-    throw error;
-  }
+const close = async () => {
+  await pool.end();
+  logger.info('Database connection pool closed');
 };
 
 module.exports = {
-  connectDatabase,
-  getPool,
-  closeDatabase,
-  pool: () => getPool()
+  query,
+  getClient,
+  close
 };

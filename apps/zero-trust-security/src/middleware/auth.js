@@ -1,63 +1,23 @@
 const jwt = require('jsonwebtoken');
-const { logger } = require('../utils/logger');
+const logger = require('../utils/logger');
 
-// JWT secret key
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-
-// Authentication middleware
 const authenticateToken = (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access token is required'
-      });
-    }
-    
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access token is required'
-      });
-    }
-    
-    // Verify JWT token
-    const decoded = jwt.verify(token, JWT_SECRET);
-    
-    // Add user info to request
-    req.user = {
-      id: decoded.userId,
-      email: decoded.email,
-      role: decoded.role,
-      permissions: decoded.permissions || []
-    };
-    
-    next();
-  } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid access token'
-      });
-    }
-    
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Access token has expired'
-      });
-    }
-    
-    logger.error('Authentication error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
   }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'secret', (err, user) => {
+    if (err) {
+      logger.error('Token verification failed:', err);
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+    
+    req.user = user;
+    next();
+  });
 };
 
-module.exports = { authenticateToken };
+module.exports = authenticateToken;

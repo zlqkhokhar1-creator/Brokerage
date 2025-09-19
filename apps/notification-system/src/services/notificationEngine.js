@@ -1,444 +1,351 @@
-const { EventEmitter } = require('events');
-const { nanoid } = require('nanoid');
-const { logger } = require('./logger');
-const { pool } = require('./database');
-const Redis = require('ioredis');
+const logger = require('../utils/logger');
+const database = require('./database');
+const redis = require('./redis');
+const emailService = require('./emailService');
+const smsService = require('./smsService');
+const pushService = require('./pushService');
+const webhookService = require('./webhookService');
+const templateService = require('./templateService');
+const routingEngine = require('./routingEngine');
 
-class NotificationEngine extends EventEmitter {
-  constructor() {
-    super();
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: process.env.REDIS_PORT || 6379,
-      password: process.env.REDIS_PASSWORD,
-      retryDelayOnFailover: 100,
-      maxRetriesPerRequest: 3
-    });
-    
-    this.notifications = new Map();
-    this.deliveryQueues = new Map();
-    this._initialized = false;
-  }
-
-  async initialize() {
+class NotificationEngine {
+  async sendNotification(req, res) {
     try {
-      // Test Redis connection
-      await this.redis.ping();
+      const { userId, type, channel, template, data, priority, scheduledAt } = req.body;
       
-      // Load active notifications
-      await this.loadActiveNotifications();
+      // Create notification record
+      const notification = await this.createNotification({
+        userId,
+        type,
+        channel,
+        template,
+        data,
+        priority: priority || 'medium',
+        scheduledAt
+      });
       
-      this._initialized = true;
-      logger.info('NotificationEngine initialized successfully');
-    } catch (error) {
-      logger.error('Failed to initialize NotificationEngine:', error);
-      throw error;
-    }
-  }
-
-  async close() {
-    try {
-      await this.redis.quit();
-      this._initialized = false;
-      logger.info('NotificationEngine closed');
-    } catch (error) {
-      logger.error('Error closing NotificationEngine:', error);
-    }
-  }
-
-  async loadActiveNotifications() {
-    try {
-      const result = await pool.query(`
-        SELECT * FROM notifications
-        WHERE status IN ('pending', 'processing', 'scheduled')
-        ORDER BY created_at ASC
-      `);
+      // Route notification
+      const routingResult = await routingEngine.routeNotification(notification);
       
-      for (const notification of result.rows) {
-        this.notifications.set(notification.id, {
-          ...notification,
-          recipients: notification.recipients ? JSON.parse(notification.recipients) : [],
-          channels: notification.channels ? JSON.parse(notification.channels) : [],
-          message: notification.message ? JSON.parse(notification.message) : {},
-          metadata: notification.metadata ? JSON.parse(notification.metadata) : {}
+      if (!routingResult.success) {
+        return res.status(400).json({
+          success: false,
+          error: 'Notification routing failed',
+          details: routingResult.error
         });
       }
       
-      logger.info(`Loaded ${result.rows.length} active notifications`);
-    } catch (error) {
-      logger.error('Error loading active notifications:', error);
-      throw error;
-    }
-  }
-
-  async sendNotification(recipients, message, channels, priority, schedule, userId) {
-    try {
-      const notificationId = nanoid();
-      const now = new Date();
+      // Send notification
+      const sendResult = await this.sendNotificationToChannel(notification, routingResult.channel);
       
-      // Create notification
-      const notification = {
-        id: notificationId,
-        recipients: Array.isArray(recipients) ? recipients : [recipients],
-        message: typeof message === 'string' ? { text: message } : message,
-        channels: Array.isArray(channels) ? channels : [channels],
-        priority: priority || 'normal',
-        status: 'pending',
-        scheduled_at: schedule ? new Date(schedule) : now,
-        created_by: userId,
-        created_at: now,
-        updated_at: now,
-        metadata: {}
-      };
-      
-      // Store notification
-      await this.storeNotification(notification);
-      
-      // Add to delivery queue
-      await this.addToDeliveryQueue(notification);
-      
-      // Cache notification
-      this.notifications.set(notificationId, notification);
-      
-      // Emit event
-      this.emit('notificationCreated', notification);
-      
-      logger.info(`Notification created: ${notificationId}`, {
-        recipients: notification.recipients.length,
-        channels: notification.channels.length,
-        priority: notification.priority
-      });
-      
-      return notification;
+      if (sendResult.success) {
+        // Update notification status
+        await this.updateNotificationStatus(notification.id, 'sent', sendResult.messageId);
+        
+        res.json({
+          success: true,
+          data: {
+            notificationId: notification.id,
+            status: 'sent',
+            channel: routingResult.channel,
+            messageId: sendResult.messageId
+          }
+        });
+      } else {
+        // Update notification status
+        await this.updateNotificationStatus(notification.id, 'failed', null, sendResult.error);
+        
+        res.status(500).json({
+          success: false,
+          error: 'Notification sending failed',
+          details: sendResult.error
+        });
+      }
     } catch (error) {
       logger.error('Error sending notification:', error);
-      throw error;
+      res.status(500).json({ success: false, error: 'Failed to send notification' });
     }
   }
 
-  async getNotification(notificationId, userId) {
+  async getNotifications(req, res) {
     try {
-      // Check cache first
-      if (this.notifications.has(notificationId)) {
-        return this.notifications.get(notificationId);
+      const { userId, type, status, channel, page = 1, limit = 10 } = req.query;
+      
+      const offset = (page - 1) * limit;
+      let query = 'SELECT * FROM notifications WHERE 1=1';
+      const params = [];
+      
+      if (userId) {
+        query += ' AND user_id = $' + (params.length + 1);
+        params.push(userId);
       }
       
-      // Load from database
-      const result = await pool.query(`
-        SELECT * FROM notifications
-        WHERE id = $1 AND created_by = $2
-      `, [notificationId, userId]);
-      
-      if (result.rows.length === 0) {
-        throw new Error('Notification not found');
+      if (type) {
+        query += ' AND type = $' + (params.length + 1);
+        params.push(type);
       }
-      
-      const notification = {
-        ...result.rows[0],
-        recipients: result.rows[0].recipients ? JSON.parse(result.rows[0].recipients) : [],
-        channels: result.rows[0].channels ? JSON.parse(result.rows[0].channels) : [],
-        message: result.rows[0].message ? JSON.parse(result.rows[0].message) : {},
-        metadata: result.rows[0].metadata ? JSON.parse(result.rows[0].metadata) : {}
-      };
-      
-      // Cache notification
-      this.notifications.set(notificationId, notification);
-      
-      return notification;
-    } catch (error) {
-      logger.error('Error getting notification:', error);
-      throw error;
-    }
-  }
-
-  async getNotifications(userId, status, channel, limit) {
-    try {
-      let query = `
-        SELECT * FROM notifications
-        WHERE created_by = $1
-      `;
-      const params = [userId];
-      let paramCount = 2;
       
       if (status) {
-        query += ` AND status = $${paramCount}`;
+        query += ' AND status = $' + (params.length + 1);
         params.push(status);
-        paramCount++;
       }
       
       if (channel) {
-        query += ` AND channels::text LIKE $${paramCount}`;
-        params.push(`%"${channel}"%`);
-        paramCount++;
+        query += ' AND channel = $' + (params.length + 1);
+        params.push(channel);
       }
       
-      query += ` ORDER BY created_at DESC LIMIT $${paramCount}`;
-      params.push(limit);
+      query += ' ORDER BY created_at DESC LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
+      params.push(limit, offset);
       
-      const result = await pool.query(query, params);
+      const result = await database.query(query, params);
       
-      return result.rows.map(row => ({
-        ...row,
-        recipients: row.recipients ? JSON.parse(row.recipients) : [],
-        channels: row.channels ? JSON.parse(row.channels) : [],
-        message: row.message ? JSON.parse(row.message) : {},
-        metadata: row.metadata ? JSON.parse(row.metadata) : {}
-      }));
+      res.json({
+        success: true,
+        data: result.rows,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: result.rowCount
+        }
+      });
     } catch (error) {
       logger.error('Error getting notifications:', error);
-      throw error;
+      res.status(500).json({ success: false, error: 'Failed to get notifications' });
     }
   }
 
-  async updateNotificationStatus(notificationId, status, metadata = {}) {
+  async getNotification(req, res) {
     try {
-      const notification = this.notifications.get(notificationId);
-      if (!notification) {
-        throw new Error('Notification not found');
+      const { id } = req.params;
+      
+      const query = 'SELECT * FROM notifications WHERE id = $1';
+      const result = await database.query(query, [id]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Notification not found' });
       }
       
-      // Update notification
-      const updatedNotification = {
-        ...notification,
-        status,
-        metadata: { ...notification.metadata, ...metadata },
-        updated_at: new Date()
-      };
-      
-      // Update database
-      await pool.query(`
-        UPDATE notifications
-        SET status = $1, metadata = $2, updated_at = $3
+      res.json({
+        success: true,
+        data: result.rows[0]
+      });
+    } catch (error) {
+      logger.error('Error getting notification:', error);
+      res.status(500).json({ success: false, error: 'Failed to get notification' });
+    }
+  }
+
+  async updateNotificationStatus(notificationId, status, messageId = null, error = null) {
+    try {
+      const query = `
+        UPDATE notifications 
+        SET status = $1, message_id = $2, error_message = $3, updated_at = NOW()
         WHERE id = $4
-      `, [status, JSON.stringify(updatedNotification.metadata), updatedNotification.updated_at, notificationId]);
+      `;
       
-      // Update cache
-      this.notifications.set(notificationId, updatedNotification);
-      
-      // Emit event
-      this.emit('notificationStatusUpdated', updatedNotification);
-      
-      logger.info(`Notification status updated: ${notificationId}`, { status });
-      
-      return updatedNotification;
+      await database.query(query, [status, messageId, error, notificationId]);
     } catch (error) {
       logger.error('Error updating notification status:', error);
-      throw error;
     }
   }
 
-  async storeNotification(notification) {
+  async createNotification(notificationData) {
     try {
-      await pool.query(`
-        INSERT INTO notifications (
-          id, recipients, message, channels, priority, status, 
-          scheduled_at, created_by, created_at, updated_at, metadata
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      `, [
-        notification.id,
-        JSON.stringify(notification.recipients),
-        JSON.stringify(notification.message),
-        JSON.stringify(notification.channels),
-        notification.priority,
-        notification.status,
-        notification.scheduled_at,
-        notification.created_by,
-        notification.created_at,
-        notification.updated_at,
-        JSON.stringify(notification.metadata)
+      const query = `
+        INSERT INTO notifications 
+        (user_id, type, channel, template, data, priority, scheduled_at, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+        RETURNING *
+      `;
+      
+      const result = await database.query(query, [
+        notificationData.userId,
+        notificationData.type,
+        notificationData.channel,
+        notificationData.template,
+        JSON.stringify(notificationData.data),
+        notificationData.priority,
+        notificationData.scheduledAt || new Date()
       ]);
+      
+      return result.rows[0];
     } catch (error) {
-      logger.error('Error storing notification:', error);
+      logger.error('Error creating notification:', error);
       throw error;
     }
   }
 
-  async addToDeliveryQueue(notification) {
+  async sendNotificationToChannel(notification, channel) {
     try {
-      const queueName = this.getQueueName(notification.priority);
-      
-      if (!this.deliveryQueues.has(queueName)) {
-        this.deliveryQueues.set(queueName, []);
+      switch (channel) {
+        case 'email':
+          return await emailService.sendEmail(notification);
+        case 'sms':
+          return await smsService.sendSMS(notification);
+        case 'push':
+          return await pushService.sendPush(notification);
+        case 'webhook':
+          return await webhookService.sendWebhook(notification);
+        default:
+          return {
+            success: false,
+            error: 'Unsupported notification channel'
+          };
       }
-      
-      this.deliveryQueues.get(queueName).push(notification);
-      
-      // Store in Redis for persistence
-      await this.redis.lpush(`notification_queue:${queueName}`, JSON.stringify(notification));
-      
-      logger.debug(`Notification added to queue: ${queueName}`, {
-        notificationId: notification.id,
-        priority: notification.priority
-      });
     } catch (error) {
-      logger.error('Error adding to delivery queue:', error);
-      throw error;
+      logger.error('Error sending notification to channel:', error);
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 
-  getQueueName(priority) {
-    switch (priority) {
-      case 'urgent':
-        return 'urgent';
-      case 'high':
-        return 'high';
-      case 'normal':
-        return 'normal';
-      case 'low':
-        return 'low';
-      default:
-        return 'normal';
-    }
-  }
-
-  async processDeliveryQueue(queueName) {
+  async processScheduledNotifications() {
     try {
-      const queue = this.deliveryQueues.get(queueName) || [];
-      const notifications = queue.splice(0, 10); // Process up to 10 notifications at a time
+      const query = `
+        SELECT * FROM notifications 
+        WHERE status = 'pending' 
+        AND scheduled_at <= NOW()
+        ORDER BY priority DESC, created_at ASC
+        LIMIT 100
+      `;
       
-      for (const notification of notifications) {
+      const result = await database.query(query);
+      
+      for (const notification of result.rows) {
         try {
-          await this.processNotification(notification);
+          // Route notification
+          const routingResult = await routingEngine.routeNotification(notification);
+          
+          if (routingResult.success) {
+            // Send notification
+            const sendResult = await this.sendNotificationToChannel(notification, routingResult.channel);
+            
+            if (sendResult.success) {
+              await this.updateNotificationStatus(notification.id, 'sent', sendResult.messageId);
+            } else {
+              await this.updateNotificationStatus(notification.id, 'failed', null, sendResult.error);
+            }
+          } else {
+            await this.updateNotificationStatus(notification.id, 'failed', null, routingResult.error);
+          }
         } catch (error) {
           logger.error(`Error processing notification ${notification.id}:`, error);
-          // Move to failed queue or retry
-          await this.handleNotificationError(notification, error);
+          await this.updateNotificationStatus(notification.id, 'failed', null, error.message);
         }
       }
-      
-      logger.debug(`Processed ${notifications.length} notifications from queue: ${queueName}`);
     } catch (error) {
-      logger.error(`Error processing delivery queue ${queueName}:`, error);
+      logger.error('Error processing scheduled notifications:', error);
     }
   }
 
-  async processNotification(notification) {
+  async getNotificationStats(req, res) {
     try {
-      // Update status to processing
-      await this.updateNotificationStatus(notification.id, 'processing');
+      const { userId, startDate, endDate } = req.query;
       
-      // Process each channel
-      for (const channel of notification.channels) {
-        try {
-          await this.deliverToChannel(notification, channel);
-        } catch (error) {
-          logger.error(`Error delivering to channel ${channel}:`, error);
-          // Continue with other channels
-        }
-      }
-      
-      // Update status to completed
-      await this.updateNotificationStatus(notification.id, 'completed', {
-        completed_at: new Date().toISOString()
-      });
-      
-      // Emit event
-      this.emit('notificationDelivered', notification);
-      
-      logger.info(`Notification delivered: ${notification.id}`);
-    } catch (error) {
-      logger.error(`Error processing notification ${notification.id}:`, error);
-      throw error;
-    }
-  }
-
-  async deliverToChannel(notification, channel) {
-    try {
-      // This would integrate with actual delivery services
-      // For now, we'll simulate delivery
-      const deliveryResult = {
-        channel,
-        status: 'delivered',
-        delivered_at: new Date(),
-        message_id: nanoid()
-      };
-      
-      // Store delivery result
-      await this.storeDeliveryResult(notification.id, deliveryResult);
-      
-      logger.debug(`Notification delivered to ${channel}`, {
-        notificationId: notification.id,
-        channel
-      });
-    } catch (error) {
-      logger.error(`Error delivering to channel ${channel}:`, error);
-      throw error;
-    }
-  }
-
-  async storeDeliveryResult(notificationId, deliveryResult) {
-    try {
-      await pool.query(`
-        INSERT INTO notification_deliveries (
-          id, notification_id, channel, status, delivered_at, message_id
-        ) VALUES ($1, $2, $3, $4, $5, $6)
-      `, [
-        nanoid(),
-        notificationId,
-        deliveryResult.channel,
-        deliveryResult.status,
-        deliveryResult.delivered_at,
-        deliveryResult.message_id
-      ]);
-    } catch (error) {
-      logger.error('Error storing delivery result:', error);
-      throw error;
-    }
-  }
-
-  async handleNotificationError(notification, error) {
-    try {
-      // Update status to failed
-      await this.updateNotificationStatus(notification.id, 'failed', {
-        error: error.message,
-        failed_at: new Date().toISOString()
-      });
-      
-      // Emit event
-      this.emit('notificationFailed', { notification, error });
-      
-      logger.error(`Notification failed: ${notification.id}`, error);
-    } catch (updateError) {
-      logger.error('Error handling notification error:', updateError);
-    }
-  }
-
-  async getNotificationStats() {
-    try {
-      const stats = {
-        totalNotifications: this.notifications.size,
-        pendingNotifications: Array.from(this.notifications.values()).filter(n => n.status === 'pending').length,
-        processingNotifications: Array.from(this.notifications.values()).filter(n => n.status === 'processing').length,
-        completedNotifications: Array.from(this.notifications.values()).filter(n => n.status === 'completed').length,
-        failedNotifications: Array.from(this.notifications.values()).filter(n => n.status === 'failed').length
-      };
-      
-      return stats;
-    } catch (error) {
-      logger.error('Error getting notification stats:', error);
-      throw error;
-    }
-  }
-
-  async getDeliveryStats(notificationId) {
-    try {
-      const result = await pool.query(`
+      let query = `
         SELECT 
           channel,
           status,
-          COUNT(*) as count,
-          AVG(EXTRACT(EPOCH FROM (delivered_at - created_at))) as avg_delivery_time
-        FROM notification_deliveries
-        WHERE notification_id = $1
-        GROUP BY channel, status
-      `, [notificationId]);
+          COUNT(*) as count
+        FROM notifications 
+        WHERE 1=1
+      `;
+      const params = [];
       
-      return result.rows;
+      if (userId) {
+        query += ' AND user_id = $' + (params.length + 1);
+        params.push(userId);
+      }
+      
+      if (startDate) {
+        query += ' AND created_at >= $' + (params.length + 1);
+        params.push(startDate);
+      }
+      
+      if (endDate) {
+        query += ' AND created_at <= $' + (params.length + 1);
+        params.push(endDate);
+      }
+      
+      query += ' GROUP BY channel, status ORDER BY channel, status';
+      
+      const result = await database.query(query, params);
+      
+      // Format stats
+      const stats = {};
+      for (const row of result.rows) {
+        if (!stats[row.channel]) {
+          stats[row.channel] = {};
+        }
+        stats[row.channel][row.status] = parseInt(row.count);
+      }
+      
+      res.json({
+        success: true,
+        data: stats
+      });
     } catch (error) {
-      logger.error('Error getting delivery stats:', error);
-      throw error;
+      logger.error('Error getting notification stats:', error);
+      res.status(500).json({ success: false, error: 'Failed to get notification stats' });
+    }
+  }
+
+  async retryFailedNotifications(req, res) {
+    try {
+      const { notificationId } = req.params;
+      
+      const query = 'SELECT * FROM notifications WHERE id = $1 AND status = $2';
+      const result = await database.query(query, [notificationId, 'failed']);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Failed notification not found' });
+      }
+      
+      const notification = result.rows[0];
+      
+      // Route notification
+      const routingResult = await routingEngine.routeNotification(notification);
+      
+      if (!routingResult.success) {
+        return res.status(400).json({
+          success: false,
+          error: 'Notification routing failed',
+          details: routingResult.error
+        });
+      }
+      
+      // Send notification
+      const sendResult = await this.sendNotificationToChannel(notification, routingResult.channel);
+      
+      if (sendResult.success) {
+        await this.updateNotificationStatus(notification.id, 'sent', sendResult.messageId);
+        
+        res.json({
+          success: true,
+          data: {
+            notificationId: notification.id,
+            status: 'sent',
+            channel: routingResult.channel,
+            messageId: sendResult.messageId
+          }
+        });
+      } else {
+        await this.updateNotificationStatus(notification.id, 'failed', null, sendResult.error);
+        
+        res.status(500).json({
+          success: false,
+          error: 'Notification retry failed',
+          details: sendResult.error
+        });
+      }
+    } catch (error) {
+      logger.error('Error retrying notification:', error);
+      res.status(500).json({ success: false, error: 'Failed to retry notification' });
     }
   }
 }
 
-module.exports = NotificationEngine;
+module.exports = new NotificationEngine();

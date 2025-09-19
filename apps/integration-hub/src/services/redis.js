@@ -1,69 +1,98 @@
-const Redis = require('ioredis');
-const { logger } = require('./logger');
+const redis = require('redis');
+const logger = require('../utils/logger');
 
-let redisClient = null;
-
-const connectRedis = async () => {
-  try {
-    if (redisClient) {
-      return redisClient;
+const client = redis.createClient({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: process.env.REDIS_PORT || 6379,
+  password: process.env.REDIS_PASSWORD || null,
+  retry_strategy: (options) => {
+    if (options.error && options.error.code === 'ECONNREFUSED') {
+      logger.error('Redis server connection refused');
+      return new Error('Redis server connection refused');
     }
+    if (options.total_retry_time > 1000 * 60 * 60) {
+      logger.error('Redis retry time exhausted');
+      return new Error('Retry time exhausted');
+    }
+    if (options.attempt > 10) {
+      logger.error('Redis max retry attempts reached');
+      return undefined;
+    }
+    return Math.min(options.attempt * 100, 3000);
+  }
+});
 
-    redisClient = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: process.env.REDIS_PORT || 6379,
-      password: process.env.REDIS_PASSWORD,
-      retryDelayOnFailover: 100,
-      maxRetriesPerRequest: 3,
-      lazyConnect: true
-    });
+client.on('connect', () => {
+  logger.info('Connected to Redis');
+});
 
-    redisClient.on('connect', () => {
-      logger.info('Redis connected successfully');
-    });
+client.on('error', (err) => {
+  logger.error('Redis error:', err);
+});
 
-    redisClient.on('error', (error) => {
-      logger.error('Redis connection error:', error);
-    });
+client.on('ready', () => {
+  logger.info('Redis client ready');
+});
 
-    redisClient.on('close', () => {
-      logger.info('Redis connection closed');
-    });
-
-    redisClient.on('reconnecting', () => {
-      logger.info('Redis reconnecting...');
-    });
-
-    await redisClient.connect();
-    return redisClient;
+const get = async (key) => {
+  try {
+    const value = await client.get(key);
+    return value ? JSON.parse(value) : null;
   } catch (error) {
-    logger.error('Failed to connect to Redis:', error);
-    throw error;
+    logger.error('Redis get error:', error);
+    return null;
   }
 };
 
-const getRedisClient = () => {
-  if (!redisClient) {
-    throw new Error('Redis client not initialized. Call connectRedis() first.');
-  }
-  return redisClient;
-};
-
-const closeRedis = async () => {
+const set = async (key, value, expireInSeconds = null) => {
   try {
-    if (redisClient) {
-      await redisClient.quit();
-      redisClient = null;
-      logger.info('Redis connection closed');
+    const stringValue = JSON.stringify(value);
+    if (expireInSeconds) {
+      await client.setex(key, expireInSeconds, stringValue);
+    } else {
+      await client.set(key, stringValue);
     }
+    return true;
+  } catch (error) {
+    logger.error('Redis set error:', error);
+    return false;
+  }
+};
+
+const del = async (key) => {
+  try {
+    await client.del(key);
+    return true;
+  } catch (error) {
+    logger.error('Redis delete error:', error);
+    return false;
+  }
+};
+
+const exists = async (key) => {
+  try {
+    const result = await client.exists(key);
+    return result === 1;
+  } catch (error) {
+    logger.error('Redis exists error:', error);
+    return false;
+  }
+};
+
+const close = async () => {
+  try {
+    await client.quit();
+    logger.info('Redis connection closed');
   } catch (error) {
     logger.error('Error closing Redis connection:', error);
-    throw error;
   }
 };
 
 module.exports = {
-  connectRedis,
-  getRedisClient,
-  closeRedis
+  client,
+  get,
+  set,
+  del,
+  exists,
+  close
 };

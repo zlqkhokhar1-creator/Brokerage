@@ -1,361 +1,351 @@
-const { EventEmitter } = require('events');
-const { nanoid } = require('nanoid');
+const { WebSocketServer } = require('ws');
+const { v4: uuidv4 } = require('uuid');
 const { logger } = require('../utils/logger');
 
-class WebSocketManager extends EventEmitter {
-  constructor(io) {
-    super();
-    this.io = io;
-    this.connections = new Map();
-    this.subscriptions = new Map();
-    this.rooms = new Map();
+class WebSocketManager {
+  constructor() {
+    this.wss = null;
+    this.clients = new Map();
+    this.userSessions = new Map();
   }
 
-  async subscribe(socketId, type, data) {
+  initialize(server) {
     try {
-      const { symbol, dataType, userId } = data;
-      
-      logger.info(`WebSocket subscription request`, {
-        socketId,
-        type,
-        symbol,
-        dataType,
-        userId
+      this.wss = new WebSocketServer({ 
+        server,
+        path: '/ws/market-data'
       });
 
-      // Create room name based on subscription type
-      const roomName = this.getRoomName(type, symbol, dataType);
-      
-      // Add socket to room
-      const socket = this.io.sockets.sockets.get(socketId);
-      if (socket) {
-        await socket.join(roomName);
-        
-        // Store subscription info
-        const subscriptionId = nanoid();
-        const subscription = {
-          id: subscriptionId,
-          socketId,
-          type,
-          symbol,
-          dataType,
-          userId,
-          roomName,
-          subscribedAt: new Date().toISOString()
-        };
-        
-        this.subscriptions.set(subscriptionId, subscription);
-        
-        // Track room membership
-        if (!this.rooms.has(roomName)) {
-          this.rooms.set(roomName, new Set());
-        }
-        this.rooms.get(roomName).add(socketId);
-        
-        // Emit subscription confirmation
-        socket.emit('subscribed', {
-          subscriptionId,
-          type,
-          symbol,
-          dataType,
-          roomName,
-          timestamp: new Date().toISOString()
-        });
-        
-        logger.info(`WebSocket subscription created`, {
-          subscriptionId,
-          roomName,
-          totalSubscriptions: this.subscriptions.size
-        });
-        
-        return subscription;
-      } else {
-        throw new Error(`Socket ${socketId} not found`);
-      }
+      this.wss.on('connection', (ws, req) => {
+        this.handleConnection(ws, req);
+      });
+
+      logger.info('WebSocket Manager initialized');
     } catch (error) {
-      logger.error('Error creating WebSocket subscription:', error);
+      logger.error('Failed to initialize WebSocket Manager:', error);
       throw error;
     }
   }
 
-  async unsubscribe(socketId, type, data) {
+  handleConnection(ws, req) {
     try {
-      const { symbol, dataType } = data;
-      
-      logger.info(`WebSocket unsubscription request`, {
-        socketId,
-        type,
-        symbol,
-        dataType
+      const clientId = uuidv4();
+      const client = {
+        id: clientId,
+        ws: ws,
+        userId: null,
+        connectedAt: new Date(),
+        lastPing: new Date()
+      };
+
+      this.clients.set(clientId, client);
+
+      ws.on('message', (data) => {
+        this.handleMessage(clientId, data);
       });
 
-      // Find subscriptions to remove
-      const subscriptionsToRemove = [];
-      for (const [subscriptionId, subscription] of this.subscriptions) {
-        if (subscription.socketId === socketId && 
-            subscription.type === type &&
-            (!symbol || subscription.symbol === symbol) &&
-            (!dataType || subscription.dataType === dataType)) {
-          subscriptionsToRemove.push(subscriptionId);
-        }
-      }
-      
-      // Remove subscriptions and leave rooms
-      let removedCount = 0;
-      for (const subscriptionId of subscriptionsToRemove) {
-        const subscription = this.subscriptions.get(subscriptionId);
-        if (subscription) {
-          // Leave room
-          const socket = this.io.sockets.sockets.get(socketId);
-          if (socket) {
-            await socket.leave(subscription.roomName);
-            
-            // Update room membership
-            if (this.rooms.has(subscription.roomName)) {
-              this.rooms.get(subscription.roomName).delete(socketId);
-              
-              // Remove empty room
-              if (this.rooms.get(subscription.roomName).size === 0) {
-                this.rooms.delete(subscription.roomName);
-              }
-            }
-          }
-          
-          // Remove subscription
-          this.subscriptions.delete(subscriptionId);
-          removedCount++;
-          
-          // Emit unsubscription confirmation
-          if (socket) {
-            socket.emit('unsubscribed', {
-              subscriptionId,
-              type: subscription.type,
-              symbol: subscription.symbol,
-              dataType: subscription.dataType,
-              timestamp: new Date().toISOString()
-            });
-          }
-        }
-      }
-      
-      logger.info(`WebSocket subscriptions removed`, {
-        socketId,
-        removedCount,
-        totalSubscriptions: this.subscriptions.size
+      ws.on('close', () => {
+        this.handleDisconnection(clientId);
       });
-      
-      return { removedCount };
-    } catch (error) {
-      logger.error('Error removing WebSocket subscriptions:', error);
-      throw error;
-    }
-  }
 
-  async distributeData(type, symbol, dataType, data) {
-    try {
-      const roomName = this.getRoomName(type, symbol, dataType);
-      
-      if (this.rooms.has(roomName)) {
-        const roomMembers = this.rooms.get(roomName);
-        
-        if (roomMembers.size > 0) {
-          // Broadcast to room
-          this.io.to(roomName).emit('marketData', {
-            type,
-            symbol,
-            dataType,
-            data,
-            timestamp: new Date().toISOString()
-          });
-          
-          logger.info(`Data distributed to room ${roomName}`, {
-            roomName,
-            memberCount: roomMembers.size,
-            type,
-            symbol,
-            dataType
-          });
-        }
-      }
-      
-    } catch (error) {
-      logger.error('Error distributing data:', error);
-      throw error;
-    }
-  }
+      ws.on('error', (error) => {
+        logger.error(`WebSocket error for client ${clientId}:`, error);
+        this.handleDisconnection(clientId);
+      });
 
-  async broadcastToAll(type, data) {
-    try {
-      this.io.emit(type, {
-        ...data,
+      // Send welcome message
+      this.sendToClient(clientId, {
+        type: 'connected',
+        clientId: clientId,
         timestamp: new Date().toISOString()
       });
-      
-      logger.info(`Broadcasted to all clients`, {
-        type,
-        clientCount: this.io.engine.clientsCount
-      });
-      
+
+      logger.info(`Client ${clientId} connected`);
     } catch (error) {
-      logger.error('Error broadcasting to all clients:', error);
-      throw error;
+      logger.error('Error handling WebSocket connection:', error);
     }
   }
 
-  async sendToUser(userId, type, data) {
+  handleMessage(clientId, data) {
     try {
-      // Find sockets for user
-      const userSockets = [];
-      for (const [subscriptionId, subscription] of this.subscriptions) {
-        if (subscription.userId === userId) {
-          userSockets.push(subscription.socketId);
-        }
+      const client = this.clients.get(clientId);
+      if (!client) return;
+
+      const message = JSON.parse(data.toString());
+      
+      switch (message.type) {
+        case 'authenticate':
+          this.handleAuthentication(clientId, message);
+          break;
+        case 'subscribe':
+          this.handleSubscription(clientId, message);
+          break;
+        case 'unsubscribe':
+          this.handleUnsubscription(clientId, message);
+          break;
+        case 'ping':
+          this.handlePing(clientId);
+          break;
+        default:
+          logger.warn(`Unknown message type: ${message.type}`);
       }
-      
-      // Send to each socket
-      for (const socketId of userSockets) {
-        const socket = this.io.sockets.sockets.get(socketId);
-        if (socket) {
-          socket.emit(type, {
-            ...data,
-            timestamp: new Date().toISOString()
-          });
-        }
-      }
-      
-      logger.info(`Sent to user ${userId}`, {
-        userId,
-        type,
-        socketCount: userSockets.length
-      });
-      
     } catch (error) {
-      logger.error('Error sending to user:', error);
-      throw error;
+      logger.error(`Error handling message from client ${clientId}:`, error);
     }
   }
 
-  async handleDisconnect(socketId) {
+  handleAuthentication(clientId, message) {
     try {
-      logger.info(`WebSocket client disconnected`, { socketId });
+      const client = this.clients.get(clientId);
+      if (!client) return;
+
+      const { userId, token } = message;
       
-      // Remove all subscriptions for this socket
-      const subscriptionsToRemove = [];
-      for (const [subscriptionId, subscription] of this.subscriptions) {
-        if (subscription.socketId === socketId) {
-          subscriptionsToRemove.push(subscriptionId);
+      // In a real implementation, you would validate the token
+      if (userId && token) {
+        client.userId = userId;
+        
+        // Add to user sessions
+        if (!this.userSessions.has(userId)) {
+          this.userSessions.set(userId, new Set());
         }
+        this.userSessions.get(userId).add(clientId);
+
+        this.sendToClient(clientId, {
+          type: 'authenticated',
+          userId: userId,
+          timestamp: new Date().toISOString()
+        });
+
+        logger.info(`Client ${clientId} authenticated as user ${userId}`);
+      } else {
+        this.sendToClient(clientId, {
+          type: 'authentication_failed',
+          error: 'Invalid credentials',
+          timestamp: new Date().toISOString()
+        });
       }
-      
-      let removedCount = 0;
-      for (const subscriptionId of subscriptionsToRemove) {
-        const subscription = this.subscriptions.get(subscriptionId);
-        if (subscription) {
-          // Update room membership
-          if (this.rooms.has(subscription.roomName)) {
-            this.rooms.get(subscription.roomName).delete(socketId);
-            
-            // Remove empty room
-            if (this.rooms.get(subscription.roomName).size === 0) {
-              this.rooms.delete(subscription.roomName);
-            }
-          }
-          
-          this.subscriptions.delete(subscriptionId);
-          removedCount++;
-        }
-      }
-      
-      logger.info(`Cleaned up subscriptions for disconnected socket`, {
-        socketId,
-        removedCount
-      });
-      
     } catch (error) {
-      logger.error('Error handling disconnect:', error);
+      logger.error(`Error handling authentication for client ${clientId}:`, error);
     }
   }
 
-  getRoomName(type, symbol, dataType) {
-    return `${type}:${symbol}:${dataType}`;
-  }
-
-  getConnectionStats() {
-    return {
-      totalConnections: this.connections.size,
-      totalSubscriptions: this.subscriptions.size,
-      totalRooms: this.rooms.size,
-      roomMembers: Array.from(this.rooms.entries()).map(([roomName, members]) => ({
-        roomName,
-        memberCount: members.size
-      }))
-    };
-  }
-
-  getSubscriptionStats() {
-    const stats = {
-      totalSubscriptions: this.subscriptions.size,
-      byType: {},
-      bySymbol: {},
-      byDataType: {}
-    };
-    
-    for (const subscription of this.subscriptions.values()) {
-      // By type
-      stats.byType[subscription.type] = (stats.byType[subscription.type] || 0) + 1;
-      
-      // By symbol
-      stats.bySymbol[subscription.symbol] = (stats.bySymbol[subscription.symbol] || 0) + 1;
-      
-      // By data type
-      stats.byDataType[subscription.dataType] = (stats.byDataType[subscription.dataType] || 0) + 1;
-    }
-    
-    return stats;
-  }
-
-  async cleanupInactiveSubscriptions() {
+  handleSubscription(clientId, message) {
     try {
-      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hours ago
-      const inactiveSubscriptions = [];
+      const client = this.clients.get(clientId);
+      if (!client) return;
+
+      const { topics } = message;
       
-      for (const [subscriptionId, subscription] of this.subscriptions) {
-        if (new Date(subscription.subscribedAt) < cutoff) {
-          inactiveSubscriptions.push(subscriptionId);
-        }
+      if (!client.subscriptions) {
+        client.subscriptions = new Set();
       }
-      
-      let removedCount = 0;
-      for (const subscriptionId of inactiveSubscriptions) {
-        const subscription = this.subscriptions.get(subscriptionId);
-        if (subscription) {
-          // Leave room
-          const socket = this.io.sockets.sockets.get(subscription.socketId);
-          if (socket) {
-            await socket.leave(subscription.roomName);
-          }
-          
-          // Update room membership
-          if (this.rooms.has(subscription.roomName)) {
-            this.rooms.get(subscription.roomName).delete(subscription.socketId);
-            
-            // Remove empty room
-            if (this.rooms.get(subscription.roomName).size === 0) {
-              this.rooms.delete(subscription.roomName);
-            }
-          }
-          
-          this.subscriptions.delete(subscriptionId);
-          removedCount++;
-        }
-      }
-      
-      if (removedCount > 0) {
-        logger.info(`Cleaned up ${removedCount} inactive subscriptions`);
-      }
-      
+
+      topics.forEach(topic => {
+        client.subscriptions.add(topic);
+      });
+
+      this.sendToClient(clientId, {
+        type: 'subscribed',
+        topics: topics,
+        timestamp: new Date().toISOString()
+      });
+
+      logger.info(`Client ${clientId} subscribed to topics: ${topics.join(', ')}`);
     } catch (error) {
-      logger.error('Error cleaning up inactive subscriptions:', error);
+      logger.error(`Error handling subscription for client ${clientId}:`, error);
+    }
+  }
+
+  handleUnsubscription(clientId, message) {
+    try {
+      const client = this.clients.get(clientId);
+      if (!client) return;
+
+      const { topics } = message;
+      
+      if (client.subscriptions) {
+        topics.forEach(topic => {
+          client.subscriptions.delete(topic);
+        });
+      }
+
+      this.sendToClient(clientId, {
+        type: 'unsubscribed',
+        topics: topics,
+        timestamp: new Date().toISOString()
+      });
+
+      logger.info(`Client ${clientId} unsubscribed from topics: ${topics.join(', ')}`);
+    } catch (error) {
+      logger.error(`Error handling unsubscription for client ${clientId}:`, error);
+    }
+  }
+
+  handlePing(clientId) {
+    try {
+      const client = this.clients.get(clientId);
+      if (!client) return;
+
+      client.lastPing = new Date();
+
+      this.sendToClient(clientId, {
+        type: 'pong',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error(`Error handling ping for client ${clientId}:`, error);
+    }
+  }
+
+  handleDisconnection(clientId) {
+    try {
+      const client = this.clients.get(clientId);
+      if (!client) return;
+
+      // Remove from user sessions
+      if (client.userId && this.userSessions.has(client.userId)) {
+        this.userSessions.get(client.userId).delete(clientId);
+        if (this.userSessions.get(client.userId).size === 0) {
+          this.userSessions.delete(client.userId);
+        }
+      }
+
+      this.clients.delete(clientId);
+      logger.info(`Client ${clientId} disconnected`);
+    } catch (error) {
+      logger.error(`Error handling disconnection for client ${clientId}:`, error);
+    }
+  }
+
+  sendToClient(clientId, message) {
+    try {
+      const client = this.clients.get(clientId);
+      if (!client || client.ws.readyState !== client.ws.OPEN) return;
+
+      client.ws.send(JSON.stringify(message));
+    } catch (error) {
+      logger.error(`Error sending message to client ${clientId}:`, error);
+    }
+  }
+
+  sendToUser(userId, message) {
+    try {
+      const userSessions = this.userSessions.get(userId);
+      if (!userSessions) return;
+
+      userSessions.forEach(clientId => {
+        this.sendToClient(clientId, message);
+      });
+    } catch (error) {
+      logger.error(`Error sending message to user ${userId}:`, error);
+    }
+  }
+
+  broadcast(message, excludeClientId = null) {
+    try {
+      this.clients.forEach((client, clientId) => {
+        if (clientId !== excludeClientId) {
+          this.sendToClient(clientId, message);
+        }
+      });
+    } catch (error) {
+      logger.error('Error broadcasting message:', error);
+    }
+  }
+
+  broadcastToSubscribers(topic, message, excludeClientId = null) {
+    try {
+      this.clients.forEach((client, clientId) => {
+        if (clientId !== excludeClientId && 
+            client.subscriptions && 
+            client.subscriptions.has(topic)) {
+          this.sendToClient(clientId, message);
+        }
+      });
+    } catch (error) {
+      logger.error(`Error broadcasting to subscribers of topic ${topic}:`, error);
+    }
+  }
+
+  sendMarketDataUpdate(userId, update) {
+    try {
+      const message = {
+        type: 'market_data_update',
+        update: update,
+        timestamp: new Date().toISOString()
+      };
+
+      this.sendToUser(userId, message);
+    } catch (error) {
+      logger.error(`Error sending market data update to user ${userId}:`, error);
+    }
+  }
+
+  sendTechnicalIndicatorUpdate(userId, update) {
+    try {
+      const message = {
+        type: 'technical_indicator_update',
+        update: update,
+        timestamp: new Date().toISOString()
+      };
+
+      this.sendToUser(userId, message);
+    } catch (error) {
+      logger.error(`Error sending technical indicator update to user ${userId}:`, error);
+    }
+  }
+
+  sendDataIngestionUpdate(userId, update) {
+    try {
+      const message = {
+        type: 'data_ingestion_update',
+        update: update,
+        timestamp: new Date().toISOString()
+      };
+
+      this.sendToUser(userId, message);
+    } catch (error) {
+      logger.error(`Error sending data ingestion update to user ${userId}:`, error);
+    }
+  }
+
+  getConnectedClients() {
+    return Array.from(this.clients.values()).map(client => ({
+      id: client.id,
+      userId: client.userId,
+      connectedAt: client.connectedAt,
+      lastPing: client.lastPing,
+      subscriptions: client.subscriptions ? Array.from(client.subscriptions) : []
+    }));
+  }
+
+  getConnectedUsers() {
+    return Array.from(this.userSessions.keys());
+  }
+
+  getClientCount() {
+    return this.clients.size;
+  }
+
+  getUserSessionCount(userId) {
+    const userSessions = this.userSessions.get(userId);
+    return userSessions ? userSessions.size : 0;
+  }
+
+  close() {
+    try {
+      if (this.wss) {
+        this.wss.close();
+        this.wss = null;
+      }
+      
+      this.clients.clear();
+      this.userSessions.clear();
+      
+      logger.info('WebSocket Manager closed');
+    } catch (error) {
+      logger.error('Error closing WebSocket Manager:', error);
     }
   }
 }

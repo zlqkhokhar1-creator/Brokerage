@@ -1,84 +1,101 @@
 const { EventEmitter } = require('events');
-const { nanoid } = require('nanoid');
+const { v4: uuidv4 } = require('uuid');
 const { logger } = require('../utils/logger');
-const { pool } = require('./database');
-const Redis = require('ioredis');
+const { connectRedis } = require('./redis');
+const { connectDatabase } = require('./database');
+const PluginManager = require('./pluginManager');
+const MarketDataProvider = require('./marketDataProvider');
+const RiskManager = require('./riskManager');
 
 class BacktestEngine extends EventEmitter {
   constructor() {
     super();
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: process.env.REDIS_PORT || 6379,
-      password: process.env.REDIS_PASSWORD,
-      retryDelayOnFailover: 100,
-      maxRetriesPerRequest: 3
-    });
-    
     this.runningBacktests = new Map();
-    this.backtestResults = new Map();
-    this._initialized = false;
+    this.redis = null;
+    this.db = null;
+    this.pluginManager = null;
+    this.marketDataProvider = null;
+    this.riskManager = null;
   }
 
   async initialize() {
     try {
-      // Test Redis connection
-      await this.redis.ping();
+      this.redis = await connectRedis();
+      this.db = await connectDatabase();
+      this.pluginManager = new PluginManager();
+      this.marketDataProvider = new MarketDataProvider();
+      this.riskManager = new RiskManager();
       
-      this._initialized = true;
-      logger.info('BacktestEngine initialized successfully');
+      await this.pluginManager.initialize();
+      await this.marketDataProvider.initialize();
+      await this.riskManager.initialize();
+      
+      logger.info('Backtest Engine initialized successfully');
     } catch (error) {
-      logger.error('Failed to initialize BacktestEngine:', error);
+      logger.error('Failed to initialize Backtest Engine:', error);
       throw error;
-    }
-  }
-
-  async close() {
-    try {
-      // Stop all running backtests
-      for (const [backtestId, backtest] of this.runningBacktests) {
-        await this.stopBacktest(backtestId);
-      }
-      
-      await this.redis.quit();
-      this._initialized = false;
-      logger.info('BacktestEngine closed');
-    } catch (error) {
-      logger.error('Error closing BacktestEngine:', error);
     }
   }
 
   async runBacktest(strategyId, startDate, endDate, initialCapital, symbols, userId) {
     try {
-      const backtestId = nanoid();
+      const backtestId = uuidv4();
+      
+      // Validate dates
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (start >= end) {
+        throw new Error('Start date must be before end date');
+      }
+
+      // Get strategy from database
+      const strategy = await this.getStrategy(strategyId, userId);
+      if (!strategy) {
+        throw new Error(`Strategy ${strategyId} not found`);
+      }
+
+      // Create backtest record
       const backtest = {
         id: backtestId,
-        strategyId,
-        startDate,
-        endDate,
-        initialCapital,
-        symbols,
-        userId,
+        strategyId: strategyId,
+        userId: userId,
+        startDate: start,
+        endDate: end,
+        initialCapital: initialCapital,
+        symbols: symbols,
         status: 'running',
-        progress: 0,
-        results: null,
-        createdAt: new Date().toISOString(),
-        startedAt: new Date().toISOString()
+        createdAt: new Date(),
+        results: {
+          totalReturn: 0,
+          annualizedReturn: 0,
+          sharpeRatio: 0,
+          maxDrawdown: 0,
+          winRate: 0,
+          totalTrades: 0,
+          profitFactor: 0,
+          averageWin: 0,
+          averageLoss: 0,
+          finalValue: initialCapital,
+          peakValue: initialCapital
+        },
+        trades: [],
+        equityCurve: [],
+        drawdownCurve: []
       };
 
-      // Store backtest
-      await this.storeBacktest(backtest);
+      // Store backtest in database
+      await this.saveBacktest(backtest);
       this.runningBacktests.set(backtestId, backtest);
-      
+
       // Start backtest execution
       this.executeBacktest(backtestId);
-      
-      logger.info(`Backtest started: ${backtestId}`, { strategyId, userId });
+
+      logger.info(`Backtest ${backtestId} started for strategy ${strategyId}`);
       this.emit('backtestStarted', backtest);
-      
+
       return backtest;
     } catch (error) {
-      logger.error('Error starting backtest:', error);
+      logger.error('Failed to run backtest:', error);
       throw error;
     }
   }
@@ -87,423 +104,310 @@ class BacktestEngine extends EventEmitter {
     try {
       const backtest = this.runningBacktests.get(backtestId);
       if (!backtest) {
-        throw new Error('Backtest not found');
+        throw new Error(`Backtest ${backtestId} not found`);
       }
 
       // Get strategy
       const strategy = await this.getStrategy(backtest.strategyId, backtest.userId);
       if (!strategy) {
-        throw new Error('Strategy not found');
+        throw new Error(`Strategy ${backtest.strategyId} not found`);
       }
 
-      // Load plugin
-      const plugin = await this.loadPlugin(strategy.pluginId);
-      if (!plugin) {
-        throw new Error('Plugin not found');
+      // Load plugin instance
+      const pluginInstance = await this.pluginManager.getPluginInstance(strategy.pluginId);
+      if (!pluginInstance) {
+        throw new Error(`Plugin ${strategy.pluginId} not loaded`);
       }
-
-      // Create strategy instance
-      const instance = new plugin.instance.constructor(strategy.config);
-      await instance.initialize(backtest.symbols);
 
       // Get historical data
       const historicalData = await this.getHistoricalData(
-        backtest.symbols,
+        backtest.symbols, 
+        backtest.startDate, 
+        backtest.endDate
+      );
+
+      if (!historicalData || historicalData.length === 0) {
+        throw new Error('No historical data available for the specified period');
+      }
+
+      // Initialize backtest state
+      let currentValue = backtest.initialCapital;
+      let peakValue = backtest.initialCapital;
+      let maxDrawdown = 0;
+      let trades = [];
+      let equityCurve = [];
+      let drawdownCurve = [];
+
+      // Process each data point
+      for (const dataPoint of historicalData) {
+        // Process data through plugin
+        const signal = pluginInstance.instance.onData(dataPoint);
+        
+        if (signal) {
+          // Validate trade with risk manager
+          const riskCheck = await this.riskManager.validateTrade({
+            symbol: dataPoint.symbol,
+            action: signal.action,
+            quantity: signal.quantity,
+            price: dataPoint.close,
+            userId: backtest.userId,
+            strategyId: backtest.strategyId,
+            isBacktest: true
+          });
+
+          if (riskCheck.approved) {
+            // Execute trade
+            const trade = this.executeBacktestTrade(
+              backtestId,
+              dataPoint,
+              signal,
+              currentValue
+            );
+
+            if (trade) {
+              trades.push(trade);
+              
+              // Update portfolio value
+              const tradeValue = trade.quantity * trade.price;
+              if (trade.action === 'BUY') {
+                currentValue -= tradeValue;
+              } else if (trade.action === 'SELL') {
+                currentValue += tradeValue;
+              }
+
+              // Update peak value and drawdown
+              if (currentValue > peakValue) {
+                peakValue = currentValue;
+              }
+              
+              const drawdown = (peakValue - currentValue) / peakValue;
+              if (drawdown > maxDrawdown) {
+                maxDrawdown = drawdown;
+              }
+            }
+          }
+        }
+
+        // Record equity curve point
+        equityCurve.push({
+          timestamp: dataPoint.timestamp,
+          value: currentValue,
+          price: dataPoint.close
+        });
+
+        // Record drawdown curve point
+        drawdownCurve.push({
+          timestamp: dataPoint.timestamp,
+          drawdown: (peakValue - currentValue) / peakValue * 100
+        });
+      }
+
+      // Calculate final results
+      const results = this.calculateBacktestResults(
+        trades,
+        backtest.initialCapital,
+        currentValue,
+        peakValue,
+        maxDrawdown,
         backtest.startDate,
         backtest.endDate
       );
 
-      // Run backtest
-      const results = await this.runBacktestSimulation(
-        instance,
-        historicalData,
-        backtest.initialCapital,
-        backtest
-      );
-
-      // Update backtest
-      backtest.status = 'completed';
+      // Update backtest with results
       backtest.results = results;
-      backtest.completedAt = new Date().toISOString();
-      backtest.progress = 100;
+      backtest.trades = trades;
+      backtest.equityCurve = equityCurve;
+      backtest.drawdownCurve = drawdownCurve;
+      backtest.status = 'completed';
+      backtest.completedAt = new Date();
 
-      // Store results
+      // Save results to database
       await this.updateBacktest(backtest);
-      this.backtestResults.set(backtestId, results);
+
+      // Remove from running backtests
       this.runningBacktests.delete(backtestId);
 
-      logger.info(`Backtest completed: ${backtestId}`, { strategyId: backtest.strategyId });
+      logger.info(`Backtest ${backtestId} completed successfully`);
       this.emit('backtestCompleted', backtest);
 
     } catch (error) {
-      logger.error(`Backtest execution failed: ${backtestId}`, error);
+      logger.error(`Error executing backtest ${backtestId}:`, error);
       
+      // Update backtest status to failed
       const backtest = this.runningBacktests.get(backtestId);
       if (backtest) {
         backtest.status = 'failed';
         backtest.error = error.message;
-        backtest.failedAt = new Date().toISOString();
+        backtest.completedAt = new Date();
         await this.updateBacktest(backtest);
         this.runningBacktests.delete(backtestId);
       }
-      
-      this.emit('backtestFailed', error, backtest);
+
+      this.emit('backtestError', error, { backtestId });
     }
   }
 
-  async runBacktestSimulation(instance, historicalData, initialCapital, backtest) {
+  executeBacktestTrade(backtestId, marketData, signal, currentValue) {
     try {
-      const portfolio = {
-        cash: initialCapital,
-        positions: {},
-        totalValue: initialCapital,
-        trades: [],
-        equity: [initialCapital]
+      const trade = {
+        id: uuidv4(),
+        backtestId: backtestId,
+        symbol: marketData.symbol,
+        action: signal.action,
+        quantity: signal.quantity,
+        price: marketData.close,
+        timestamp: marketData.timestamp,
+        reason: signal.reason,
+        status: 'executed'
       };
 
-      const symbols = Object.keys(historicalData);
-      const maxLength = Math.max(...symbols.map(symbol => historicalData[symbol].length));
-      
-      // Process each time step
-      for (let i = 0; i < maxLength; i++) {
-        // Update progress
-        backtest.progress = Math.round((i / maxLength) * 100);
-        await this.updateBacktest(backtest);
-        
-        // Prepare data for current time step
-        const currentData = {};
-        for (const symbol of symbols) {
-          if (historicalData[symbol][i]) {
-            currentData[symbol] = historicalData[symbol].slice(0, i + 1);
-          }
-        }
-
-        // Execute strategy for each symbol
-        for (const symbol of symbols) {
-          if (!currentData[symbol]) continue;
-
-          try {
-            const signal = instance.onTick(currentData[symbol]);
-            
-            if (signal) {
-              await this.processBacktestSignal(signal, symbol, historicalData[symbol][i], portfolio);
-            }
-          } catch (error) {
-            logger.error(`Error processing signal for ${symbol}:`, error);
-          }
-        }
-
-        // Update portfolio value
-        await this.updatePortfolioValue(portfolio, historicalData, i);
-        portfolio.equity.push(portfolio.totalValue);
-      }
-
-      // Calculate final results
-      const results = this.calculateBacktestResults(portfolio, backtest);
-      
-      return results;
+      return trade;
     } catch (error) {
-      logger.error('Error running backtest simulation:', error);
-      throw error;
+      logger.error(`Failed to execute backtest trade:`, error);
+      return null;
     }
   }
 
-  async processBacktestSignal(signal, symbol, currentPrice, portfolio) {
+  calculateBacktestResults(trades, initialCapital, finalValue, peakValue, maxDrawdown, startDate, endDate) {
     try {
-      const { action, confidence, reason } = signal;
-      const price = currentPrice.close;
-      const quantity = Math.floor((portfolio.cash * 0.1) / price); // Use 10% of cash
-
-      if (action === 'BUY' && portfolio.cash >= price * quantity) {
-        // Execute buy order
-        const cost = price * quantity;
-        portfolio.cash -= cost;
-        portfolio.positions[symbol] = (portfolio.positions[symbol] || 0) + quantity;
-        
-        portfolio.trades.push({
-          id: nanoid(),
-          symbol,
-          action: 'BUY',
-          quantity,
-          price,
-          cost,
-          timestamp: currentPrice.timestamp,
-          reason,
-          confidence
-        });
-      } else if (action === 'SELL' && portfolio.positions[symbol] > 0) {
-        // Execute sell order
-        const quantity = portfolio.positions[symbol];
-        const proceeds = price * quantity;
-        portfolio.cash += proceeds;
-        portfolio.positions[symbol] = 0;
-        
-        portfolio.trades.push({
-          id: nanoid(),
-          symbol,
-          action: 'SELL',
-          quantity,
-          price,
-          cost: proceeds,
-          timestamp: currentPrice.timestamp,
-          reason,
-          confidence
-        });
-      }
-    } catch (error) {
-      logger.error('Error processing backtest signal:', error);
-    }
-  }
-
-  async updatePortfolioValue(portfolio, historicalData, timeIndex) {
-    try {
-      let totalValue = portfolio.cash;
+      const totalReturn = (finalValue - initialCapital) / initialCapital;
       
-      for (const [symbol, quantity] of Object.entries(portfolio.positions)) {
-        if (quantity > 0 && historicalData[symbol][timeIndex]) {
-          const currentPrice = historicalData[symbol][timeIndex].close;
-          totalValue += currentPrice * quantity;
-        }
-      }
-      
-      portfolio.totalValue = totalValue;
-    } catch (error) {
-      logger.error('Error updating portfolio value:', error);
-    }
-  }
+      // Calculate annualized return
+      const days = (endDate - startDate) / (1000 * 60 * 60 * 24);
+      const years = days / 365;
+      const annualizedReturn = Math.pow(1 + totalReturn, 1 / years) - 1;
 
-  calculateBacktestResults(portfolio, backtest) {
-    try {
-      const equity = portfolio.equity;
-      const trades = portfolio.trades;
-      
-      // Basic metrics
-      const totalReturn = (equity[equity.length - 1] - equity[0]) / equity[0];
-      const totalTrades = trades.length;
+      // Calculate trade statistics
       const winningTrades = trades.filter(trade => {
-        const buyTrade = trades.find(t => t.symbol === trade.symbol && t.action === 'BUY' && t.timestamp < trade.timestamp);
-        return buyTrade && trade.price > buyTrade.price;
-      }).length;
-      const winRate = totalTrades > 0 ? winningTrades / totalTrades : 0;
-      
-      // Calculate Sharpe ratio
-      const returns = [];
-      for (let i = 1; i < equity.length; i++) {
-        returns.push((equity[i] - equity[i - 1]) / equity[i - 1]);
-      }
-      
-      const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
-      const returnVariance = returns.reduce((a, b) => a + Math.pow(b - avgReturn, 2), 0) / returns.length;
-      const returnStdDev = Math.sqrt(returnVariance);
-      const sharpeRatio = returnStdDev > 0 ? avgReturn / returnStdDev : 0;
-      
-      // Calculate maximum drawdown
-      let maxDrawdown = 0;
-      let peak = equity[0];
-      
-      for (let i = 1; i < equity.length; i++) {
-        if (equity[i] > peak) {
-          peak = equity[i];
-        }
-        const drawdown = (peak - equity[i]) / peak;
-        maxDrawdown = Math.max(maxDrawdown, drawdown);
-      }
-      
-      // Calculate other metrics
-      const finalValue = equity[equity.length - 1];
-      const profitLoss = finalValue - backtest.initialCapital;
-      const profitLossPercent = (profitLoss / backtest.initialCapital) * 100;
-      
+        // This is a simplified calculation - in reality, you'd track P&L per trade
+        return trade.action === 'SELL' && trade.quantity > 0;
+      });
+
+      const winRate = trades.length > 0 ? (winningTrades.length / trades.length) * 100 : 0;
+
+      // Calculate profit factor (simplified)
+      const grossProfit = winningTrades.reduce((sum, trade) => sum + (trade.quantity * trade.price), 0);
+      const grossLoss = trades.filter(trade => trade.action === 'BUY').reduce((sum, trade) => sum + (trade.quantity * trade.price), 0);
+      const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : 0;
+
+      // Calculate average win/loss
+      const averageWin = winningTrades.length > 0 ? grossProfit / winningTrades.length : 0;
+      const losingTrades = trades.filter(trade => trade.action === 'BUY');
+      const averageLoss = losingTrades.length > 0 ? grossLoss / losingTrades.length : 0;
+
+      // Calculate Sharpe ratio (simplified)
+      const sharpeRatio = totalReturn > 0 ? totalReturn / Math.max(maxDrawdown, 0.01) : 0;
+
       return {
-        backtestId: backtest.id,
-        strategyId: backtest.strategyId,
-        startDate: backtest.startDate,
-        endDate: backtest.endDate,
-        initialCapital: backtest.initialCapital,
-        finalValue,
-        profitLoss,
-        profitLossPercent,
-        totalReturn,
-        totalTrades,
-        winningTrades,
-        winRate,
-        sharpeRatio,
-        maxDrawdown,
-        equity,
-        trades,
-        metrics: {
-          avgReturn,
-          returnStdDev,
-          volatility: returnStdDev * Math.sqrt(252), // Annualized
-          calmarRatio: totalReturn / maxDrawdown,
-          sortinoRatio: this.calculateSortinoRatio(returns),
-          var95: this.calculateVaR(returns, 0.95),
-          var99: this.calculateVaR(returns, 0.99)
-        },
-        createdAt: new Date().toISOString()
+        totalReturn: totalReturn * 100, // Convert to percentage
+        annualizedReturn: annualizedReturn * 100, // Convert to percentage
+        sharpeRatio: sharpeRatio,
+        maxDrawdown: maxDrawdown * 100, // Convert to percentage
+        winRate: winRate,
+        totalTrades: trades.length,
+        profitFactor: profitFactor,
+        averageWin: averageWin,
+        averageLoss: averageLoss,
+        finalValue: finalValue,
+        peakValue: peakValue
       };
     } catch (error) {
       logger.error('Error calculating backtest results:', error);
-      throw error;
-    }
-  }
-
-  calculateSortinoRatio(returns) {
-    try {
-      const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
-      const negativeReturns = returns.filter(r => r < 0);
-      const downsideDeviation = Math.sqrt(
-        negativeReturns.reduce((a, b) => a + Math.pow(b, 2), 0) / negativeReturns.length
-      );
-      return downsideDeviation > 0 ? avgReturn / downsideDeviation : 0;
-    } catch (error) {
-      return 0;
-    }
-  }
-
-  calculateVaR(returns, confidence) {
-    try {
-      const sortedReturns = returns.sort((a, b) => a - b);
-      const index = Math.floor((1 - confidence) * sortedReturns.length);
-      return sortedReturns[index] || 0;
-    } catch (error) {
-      return 0;
-    }
-  }
-
-  async getBacktest(backtestId, userId) {
-    try {
-      const query = 'SELECT * FROM backtests WHERE id = $1 AND user_id = $2';
-      const result = await pool.query(query, [backtestId, userId]);
-      
-      if (result.rows.length === 0) {
-        throw new Error('Backtest not found');
-      }
-      
-      const row = result.rows[0];
       return {
-        id: row.id,
-        strategyId: row.strategy_id,
-        startDate: row.start_date,
-        endDate: row.end_date,
-        initialCapital: row.initial_capital,
-        symbols: JSON.parse(row.symbols),
-        status: row.status,
-        progress: row.progress,
-        results: row.results ? JSON.parse(row.results) : null,
-        error: row.error,
-        createdAt: row.created_at,
-        startedAt: row.started_at,
-        completedAt: row.completed_at,
-        failedAt: row.failed_at
+        totalReturn: 0,
+        annualizedReturn: 0,
+        sharpeRatio: 0,
+        maxDrawdown: 0,
+        winRate: 0,
+        totalTrades: 0,
+        profitFactor: 0,
+        averageWin: 0,
+        averageLoss: 0,
+        finalValue: initialCapital,
+        peakValue: initialCapital
       };
-    } catch (error) {
-      logger.error('Error getting backtest:', error);
-      throw error;
-    }
-  }
-
-  async getBacktestResults(backtestId, userId) {
-    try {
-      const backtest = await this.getBacktest(backtestId, userId);
-      
-      if (backtest.status !== 'completed') {
-        throw new Error('Backtest not completed');
-      }
-      
-      return backtest.results;
-    } catch (error) {
-      logger.error('Error getting backtest results:', error);
-      throw error;
     }
   }
 
   async getHistoricalData(symbols, startDate, endDate) {
     try {
-      const historicalData = {};
+      // This would typically fetch from a market data service
+      // For now, we'll simulate some data
+      const data = [];
+      const currentDate = new Date(startDate);
       
-      for (const symbol of symbols) {
-        // Get data from database
-        const query = `
-          SELECT timestamp, open, high, low, close, volume
-          FROM market_data
-          WHERE symbol = $1 AND timestamp BETWEEN $2 AND $3
-          ORDER BY timestamp ASC
-        `;
+      while (currentDate <= endDate) {
+        for (const symbol of symbols) {
+          // Generate simulated OHLCV data
+          const basePrice = 100 + Math.random() * 50;
+          const open = basePrice + (Math.random() - 0.5) * 2;
+          const high = open + Math.random() * 3;
+          const low = open - Math.random() * 3;
+          const close = low + Math.random() * (high - low);
+          const volume = Math.floor(Math.random() * 1000000) + 100000;
+
+          data.push({
+            symbol: symbol,
+            timestamp: new Date(currentDate),
+            open: parseFloat(open.toFixed(2)),
+            high: parseFloat(high.toFixed(2)),
+            low: parseFloat(low.toFixed(2)),
+            close: parseFloat(close.toFixed(2)),
+            volume: volume
+          });
+        }
         
-        const result = await pool.query(query, [symbol, startDate, endDate]);
-        historicalData[symbol] = result.rows;
+        currentDate.setDate(currentDate.getDate() + 1);
       }
-      
-      return historicalData;
+
+      return data;
     } catch (error) {
       logger.error('Error getting historical data:', error);
-      return {};
+      return [];
     }
   }
 
   async getStrategy(strategyId, userId) {
     try {
-      const query = 'SELECT * FROM strategies WHERE id = $1 AND user_id = $2';
-      const result = await pool.query(query, [strategyId, userId]);
+      const query = `
+        SELECT id, name, description, plugin_id, config, symbols, user_id, status
+        FROM strategies 
+        WHERE id = $1 AND user_id = $2
+      `;
+      
+      const result = await this.db.query(query, [strategyId, userId]);
       
       if (result.rows.length === 0) {
         return null;
       }
-      
+
       const row = result.rows[0];
       return {
         id: row.id,
         name: row.name,
         description: row.description,
         pluginId: row.plugin_id,
-        config: JSON.parse(row.config),
-        symbols: JSON.parse(row.symbols),
-        userId: row.user_id
+        config: row.config,
+        symbols: row.symbols,
+        userId: row.user_id,
+        status: row.status
       };
     } catch (error) {
-      logger.error('Error getting strategy:', error);
+      logger.error(`Error getting strategy ${strategyId}:`, error);
       return null;
     }
   }
 
-  async loadPlugin(pluginId) {
-    try {
-      // Mock plugin loading
-      return {
-        instance: {
-          constructor: class MockStrategy {
-            constructor(config) {
-              this.config = config;
-            }
-            
-            async initialize(symbols) {
-              this.symbols = symbols;
-            }
-            
-            onTick(data) {
-              // Mock strategy logic
-              return null;
-            }
-          }
-        }
-      };
-    } catch (error) {
-      logger.error('Error loading plugin:', error);
-      throw error;
-    }
-  }
-
-  async storeBacktest(backtest) {
+  async saveBacktest(backtest) {
     try {
       const query = `
-        INSERT INTO backtests (
-          id, strategy_id, user_id, start_date, end_date, initial_capital,
-          symbols, status, progress, created_at, started_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        INSERT INTO backtests (id, strategy_id, user_id, start_date, end_date, initial_capital, 
+                              symbols, status, results, trades, equity_curve, drawdown_curve, 
+                              created_at, completed_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       `;
       
-      await pool.query(query, [
+      await this.db.query(query, [
         backtest.id,
         backtest.strategyId,
         backtest.userId,
@@ -512,12 +416,15 @@ class BacktestEngine extends EventEmitter {
         backtest.initialCapital,
         JSON.stringify(backtest.symbols),
         backtest.status,
-        backtest.progress,
+        JSON.stringify(backtest.results),
+        JSON.stringify(backtest.trades),
+        JSON.stringify(backtest.equityCurve),
+        JSON.stringify(backtest.drawdownCurve),
         backtest.createdAt,
-        backtest.startedAt
+        backtest.completedAt
       ]);
     } catch (error) {
-      logger.error('Error storing backtest:', error);
+      logger.error('Error saving backtest:', error);
       throw error;
     }
   }
@@ -525,24 +432,21 @@ class BacktestEngine extends EventEmitter {
   async updateBacktest(backtest) {
     try {
       const query = `
-        UPDATE backtests SET
-          status = $2,
-          progress = $3,
-          results = $4,
-          error = $5,
-          completed_at = $6,
-          failed_at = $7
-        WHERE id = $1
+        UPDATE backtests 
+        SET status = $1, results = $2, trades = $3, equity_curve = $4, 
+            drawdown_curve = $5, completed_at = $6, error = $7
+        WHERE id = $8
       `;
       
-      await pool.query(query, [
-        backtest.id,
+      await this.db.query(query, [
         backtest.status,
-        backtest.progress,
-        backtest.results ? JSON.stringify(backtest.results) : null,
-        backtest.error,
+        JSON.stringify(backtest.results),
+        JSON.stringify(backtest.trades),
+        JSON.stringify(backtest.equityCurve),
+        JSON.stringify(backtest.drawdownCurve),
         backtest.completedAt,
-        backtest.failedAt
+        backtest.error || null,
+        backtest.id
       ]);
     } catch (error) {
       logger.error('Error updating backtest:', error);
@@ -550,27 +454,90 @@ class BacktestEngine extends EventEmitter {
     }
   }
 
-  async stopBacktest(backtestId) {
+  async getBacktest(backtestId, userId) {
     try {
-      const backtest = this.runningBacktests.get(backtestId);
-      if (backtest) {
-        backtest.status = 'stopped';
-        backtest.stoppedAt = new Date().toISOString();
-        await this.updateBacktest(backtest);
-        this.runningBacktests.delete(backtestId);
+      const query = `
+        SELECT * FROM backtests 
+        WHERE id = $1 AND user_id = $2
+      `;
+      
+      const result = await this.db.query(query, [backtestId, userId]);
+      
+      if (result.rows.length === 0) {
+        return null;
       }
+
+      const row = result.rows[0];
+      return {
+        id: row.id,
+        strategyId: row.strategy_id,
+        userId: row.user_id,
+        startDate: row.start_date,
+        endDate: row.end_date,
+        initialCapital: row.initial_capital,
+        symbols: row.symbols,
+        status: row.status,
+        results: row.results,
+        trades: row.trades,
+        equityCurve: row.equity_curve,
+        drawdownCurve: row.drawdown_curve,
+        createdAt: row.created_at,
+        completedAt: row.completed_at,
+        error: row.error
+      };
     } catch (error) {
-      logger.error('Error stopping backtest:', error);
+      logger.error(`Error getting backtest ${backtestId}:`, error);
+      return null;
+    }
+  }
+
+  async getBacktestResults(backtestId, userId) {
+    try {
+      const backtest = await this.getBacktest(backtestId, userId);
+      if (!backtest) {
+        return null;
+      }
+
+      return {
+        summary: backtest.results,
+        trades: backtest.trades,
+        equityCurve: backtest.equityCurve,
+        drawdownCurve: backtest.drawdownCurve,
+        status: backtest.status,
+        completedAt: backtest.completedAt
+      };
+    } catch (error) {
+      logger.error(`Error getting backtest results ${backtestId}:`, error);
+      return null;
     }
   }
 
   async cleanupBacktest(backtestId) {
     try {
-      const query = 'DELETE FROM backtests WHERE id = $1';
-      await pool.query(query, [backtestId]);
-      this.backtestResults.delete(backtestId);
+      const query = `DELETE FROM backtests WHERE id = $1`;
+      await this.db.query(query, [backtestId]);
+      logger.info(`Backtest ${backtestId} cleaned up`);
     } catch (error) {
-      logger.error('Error cleaning up backtest:', error);
+      logger.error(`Error cleaning up backtest ${backtestId}:`, error);
+    }
+  }
+
+  async close() {
+    try {
+      // Close services
+      if (this.pluginManager) {
+        await this.pluginManager.close();
+      }
+      if (this.marketDataProvider) {
+        await this.marketDataProvider.close();
+      }
+      if (this.riskManager) {
+        await this.riskManager.close();
+      }
+
+      logger.info('Backtest Engine closed successfully');
+    } catch (error) {
+      logger.error('Error closing Backtest Engine:', error);
     }
   }
 }

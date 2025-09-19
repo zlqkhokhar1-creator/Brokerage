@@ -1,948 +1,447 @@
-const { EventEmitter } = require('events');
-const { nanoid } = require('nanoid');
-const { logger } = require('./logger');
-const { pool } = require('./database');
-const Redis = require('ioredis');
+const logger = require('../utils/logger');
+const database = require('./database');
+const redis = require('./redis');
 
-class MicroSegmentation extends EventEmitter {
-  constructor() {
-    super();
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: process.env.REDIS_PORT || 6379,
-      password: process.env.REDIS_PASSWORD,
-      retryDelayOnFailover: 100,
-      maxRetriesPerRequest: 3
-    });
+class MicroSegmentation {
+  async applySegmentationRules(userId, resource, context) {
+    try {
+      // Get user's security profile
+      const securityProfile = await this.getUserSecurityProfile(userId);
+      
+      // Apply network segmentation rules
+      const networkResult = await this.applyNetworkSegmentation(userId, resource, context);
+      if (!networkResult.allowed) {
+        return networkResult;
+      }
+      
+      // Apply data segmentation rules
+      const dataResult = await this.applyDataSegmentation(userId, resource, context);
+      if (!dataResult.allowed) {
+        return dataResult;
+      }
+      
+      // Apply application segmentation rules
+      const appResult = await this.applyApplicationSegmentation(userId, resource, context);
+      if (!appResult.allowed) {
+        return appResult;
+      }
+      
+      return {
+        allowed: true,
+        restrictions: {
+          network: networkResult.restrictions,
+          data: dataResult.restrictions,
+          application: appResult.restrictions
+        }
+      };
+    } catch (error) {
+      logger.error('Error applying segmentation rules:', error);
+      return {
+        allowed: false,
+        reason: 'Segmentation rule application failed'
+      };
+    }
+  }
+
+  async getUserSecurityProfile(userId) {
+    try {
+      const query = `
+        SELECT sp.*, u.role, u.security_level
+        FROM user_security_profiles sp
+        JOIN users u ON sp.user_id = u.id
+        WHERE sp.user_id = $1 AND sp.is_active = true
+      `;
+      
+      const result = await database.query(query, [userId]);
+      
+      if (result.rows.length === 0) {
+        // Return default security profile
+        return {
+          userId,
+          securityLevel: 'medium',
+          networkSegments: ['default'],
+          dataAccessLevel: 'standard',
+          applicationAccess: ['basic'],
+          restrictions: {}
+        };
+      }
+      
+      const profile = result.rows[0];
+      return {
+        userId: profile.user_id,
+        securityLevel: profile.security_level,
+        networkSegments: profile.network_segments || ['default'],
+        dataAccessLevel: profile.data_access_level || 'standard',
+        applicationAccess: profile.application_access || ['basic'],
+        restrictions: profile.restrictions || {}
+      };
+    } catch (error) {
+      logger.error('Error getting user security profile:', error);
+      return {
+        userId,
+        securityLevel: 'medium',
+        networkSegments: ['default'],
+        dataAccessLevel: 'standard',
+        applicationAccess: ['basic'],
+        restrictions: {}
+      };
+    }
+  }
+
+  async applyNetworkSegmentation(userId, resource, context) {
+    try {
+      const securityProfile = await this.getUserSecurityProfile(userId);
+      const allowedSegments = securityProfile.networkSegments;
+      
+      // Check if resource is in allowed network segment
+      const resourceSegment = await this.getResourceNetworkSegment(resource);
+      
+      if (!allowedSegments.includes(resourceSegment)) {
+        return {
+          allowed: false,
+          reason: 'Resource not in allowed network segment',
+          restrictions: {
+            allowedSegments,
+            resourceSegment
+          }
+        };
+      }
+      
+      // Check for network isolation requirements
+      const isolationRequired = await this.checkNetworkIsolation(userId, resource);
+      if (isolationRequired && !context.isolated) {
+        return {
+          allowed: false,
+          reason: 'Network isolation required for this resource',
+          restrictions: {
+            isolationRequired: true
+          }
+        };
+      }
+      
+      return {
+        allowed: true,
+        restrictions: {
+          allowedSegments,
+          resourceSegment,
+          isolationRequired
+        }
+      };
+    } catch (error) {
+      logger.error('Error applying network segmentation:', error);
+      return {
+        allowed: false,
+        reason: 'Network segmentation check failed'
+      };
+    }
+  }
+
+  async applyDataSegmentation(userId, resource, context) {
+    try {
+      const securityProfile = await this.getUserSecurityProfile(userId);
+      const userDataAccessLevel = securityProfile.dataAccessLevel;
+      
+      // Get resource data classification
+      const resourceClassification = await this.getResourceDataClassification(resource);
+      
+      // Check data access level compatibility
+      if (!this.isDataAccessAllowed(userDataAccessLevel, resourceClassification)) {
+        return {
+          allowed: false,
+          reason: 'Insufficient data access level for this resource',
+          restrictions: {
+            userDataAccessLevel,
+            resourceClassification
+          }
+        };
+      }
+      
+      // Check for data encryption requirements
+      const encryptionRequired = await this.checkDataEncryptionRequirement(resource);
+      if (encryptionRequired && !context.encrypted) {
+        return {
+          allowed: false,
+          reason: 'Data encryption required for this resource',
+          restrictions: {
+            encryptionRequired: true
+          }
+        };
+      }
+      
+      return {
+        allowed: true,
+        restrictions: {
+          userDataAccessLevel,
+          resourceClassification,
+          encryptionRequired
+        }
+      };
+    } catch (error) {
+      logger.error('Error applying data segmentation:', error);
+      return {
+        allowed: false,
+        reason: 'Data segmentation check failed'
+      };
+    }
+  }
+
+  async applyApplicationSegmentation(userId, resource, context) {
+    try {
+      const securityProfile = await this.getUserSecurityProfile(userId);
+      const userApplicationAccess = securityProfile.applicationAccess;
+      
+      // Get resource application type
+      const resourceApplicationType = await this.getResourceApplicationType(resource);
+      
+      // Check if user has access to this application type
+      if (!userApplicationAccess.includes(resourceApplicationType)) {
+        return {
+          allowed: false,
+          reason: 'User not authorized for this application type',
+          restrictions: {
+            userApplicationAccess,
+            resourceApplicationType
+          }
+        };
+      }
+      
+      // Check for application-specific restrictions
+      const appRestrictions = await this.getApplicationRestrictions(resource);
+      if (appRestrictions && !this.checkApplicationRestrictions(userId, appRestrictions, context)) {
+        return {
+          allowed: false,
+          reason: 'Application-specific restrictions not met',
+          restrictions: appRestrictions
+        };
+      }
+      
+      return {
+        allowed: true,
+        restrictions: {
+          userApplicationAccess,
+          resourceApplicationType,
+          appRestrictions
+        }
+      };
+    } catch (error) {
+      logger.error('Error applying application segmentation:', error);
+      return {
+        allowed: false,
+        reason: 'Application segmentation check failed'
+      };
+    }
+  }
+
+  async getResourceNetworkSegment(resource) {
+    try {
+      const query = 'SELECT network_segment FROM resources WHERE name = $1';
+      const result = await database.query(query, [resource]);
+      
+      if (result.rows.length === 0) {
+        return 'default';
+      }
+      
+      return result.rows[0].network_segment || 'default';
+    } catch (error) {
+      logger.error('Error getting resource network segment:', error);
+      return 'default';
+    }
+  }
+
+  async getResourceDataClassification(resource) {
+    try {
+      const query = 'SELECT data_classification FROM resources WHERE name = $1';
+      const result = await database.query(query, [resource]);
+      
+      if (result.rows.length === 0) {
+        return 'public';
+      }
+      
+      return result.rows[0].data_classification || 'public';
+    } catch (error) {
+      logger.error('Error getting resource data classification:', error);
+      return 'public';
+    }
+  }
+
+  async getResourceApplicationType(resource) {
+    try {
+      const query = 'SELECT application_type FROM resources WHERE name = $1';
+      const result = await database.query(query, [resource]);
+      
+      if (result.rows.length === 0) {
+        return 'basic';
+      }
+      
+      return result.rows[0].application_type || 'basic';
+    } catch (error) {
+      logger.error('Error getting resource application type:', error);
+      return 'basic';
+    }
+  }
+
+  isDataAccessAllowed(userLevel, resourceLevel) {
+    const accessLevels = {
+      'public': 1,
+      'internal': 2,
+      'confidential': 3,
+      'restricted': 4,
+      'top_secret': 5
+    };
     
-    this.segments = new Map();
-    this.policies = new Map();
-    this.rules = new Map();
-    this.networkConfigs = new Map();
-    this.enforcementPoints = new Map();
-    this._initialized = false;
+    const userLevelValue = accessLevels[userLevel] || 1;
+    const resourceLevelValue = accessLevels[resourceLevel] || 1;
+    
+    return userLevelValue >= resourceLevelValue;
   }
 
-  async initialize() {
+  async checkNetworkIsolation(userId, resource) {
     try {
-      // Test Redis connection
-      await this.redis.ping();
+      const query = `
+        SELECT requires_isolation 
+        FROM resources 
+        WHERE name = $1 AND requires_isolation = true
+      `;
       
-      // Load segments
-      await this.loadSegments();
-      
-      // Load policies
-      await this.loadPolicies();
-      
-      // Load rules
-      await this.loadRules();
-      
-      // Load network configurations
-      await this.loadNetworkConfigs();
-      
-      // Load enforcement points
-      await this.loadEnforcementPoints();
-      
-      this._initialized = true;
-      logger.info('MicroSegmentation initialized successfully');
+      const result = await database.query(query, [resource]);
+      return result.rows.length > 0;
     } catch (error) {
-      logger.error('Failed to initialize MicroSegmentation:', error);
-      throw error;
-    }
-  }
-
-  async close() {
-    try {
-      await this.redis.quit();
-      this._initialized = false;
-      logger.info('MicroSegmentation closed');
-    } catch (error) {
-      logger.error('Error closing MicroSegmentation:', error);
-    }
-  }
-
-  async loadSegments() {
-    try {
-      const result = await pool.query(`
-        SELECT * FROM network_segments
-        WHERE is_active = true
-        ORDER BY priority DESC, created_at ASC
-      `);
-      
-      for (const segment of result.rows) {
-        this.segments.set(segment.id, {
-          ...segment,
-          rules: segment.rules ? JSON.parse(segment.rules) : [],
-          conditions: segment.conditions ? JSON.parse(segment.conditions) : []
-        });
-      }
-      
-      logger.info(`Loaded ${result.rows.length} segments`);
-    } catch (error) {
-      logger.error('Error loading segments:', error);
-      throw error;
-    }
-  }
-
-  async loadPolicies() {
-    try {
-      const result = await pool.query(`
-        SELECT * FROM segmentation_policies
-        WHERE is_active = true
-        ORDER BY priority DESC, created_at ASC
-      `);
-      
-      for (const policy of result.rows) {
-        this.policies.set(policy.id, {
-          ...policy,
-          rules: policy.rules ? JSON.parse(policy.rules) : [],
-          conditions: policy.conditions ? JSON.parse(policy.conditions) : []
-        });
-      }
-      
-      logger.info(`Loaded ${result.rows.length} policies`);
-    } catch (error) {
-      logger.error('Error loading policies:', error);
-      throw error;
-    }
-  }
-
-  async loadRules() {
-    try {
-      const result = await pool.query(`
-        SELECT * FROM segmentation_rules
-        WHERE is_active = true
-        ORDER BY priority DESC, created_at ASC
-      `);
-      
-      for (const rule of result.rows) {
-        this.rules.set(rule.id, {
-          ...rule,
-          conditions: rule.conditions ? JSON.parse(rule.conditions) : [],
-          actions: rule.actions ? JSON.parse(rule.actions) : []
-        });
-      }
-      
-      logger.info(`Loaded ${result.rows.length} rules`);
-    } catch (error) {
-      logger.error('Error loading rules:', error);
-      throw error;
-    }
-  }
-
-  async loadNetworkConfigs() {
-    try {
-      const result = await pool.query(`
-        SELECT * FROM network_configurations
-        WHERE is_active = true
-        ORDER BY created_at ASC
-      `);
-      
-      for (const config of result.rows) {
-        this.networkConfigs.set(config.id, {
-          ...config,
-          config: config.config ? JSON.parse(config.config) : {}
-        });
-      }
-      
-      logger.info(`Loaded ${result.rows.length} network configurations`);
-    } catch (error) {
-      logger.error('Error loading network configurations:', error);
-      throw error;
-    }
-  }
-
-  async loadEnforcementPoints() {
-    try {
-      const result = await pool.query(`
-        SELECT * FROM enforcement_points
-        WHERE is_active = true
-        ORDER BY priority DESC, created_at ASC
-      `);
-      
-      for (const point of result.rows) {
-        this.enforcementPoints.set(point.id, {
-          ...point,
-          config: point.config ? JSON.parse(point.config) : {}
-        });
-      }
-      
-      logger.info(`Loaded ${result.rows.length} enforcement points`);
-    } catch (error) {
-      logger.error('Error loading enforcement points:', error);
-      throw error;
-    }
-  }
-
-  async createPolicy(name, description, rules, networkConfig, createdBy) {
-    try {
-      const policyId = nanoid();
-      const policy = {
-        id: policyId,
-        name,
-        description,
-        rules: rules || [],
-        networkConfig: networkConfig || {},
-        priority: 0,
-        is_active: true,
-        created_by: createdBy,
-        created_at: new Date(),
-        updated_at: new Date()
-      };
-      
-      // Store in database
-      await pool.query(`
-        INSERT INTO segmentation_policies (id, name, description, rules, network_config, priority, is_active, created_by, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      `, [
-        policyId, name, description, JSON.stringify(rules), JSON.stringify(networkConfig),
-        0, true, createdBy, policy.created_at, policy.updated_at
-      ]);
-      
-      // Store in memory
-      this.policies.set(policyId, policy);
-      
-      // Store in Redis
-      await this.redis.setex(
-        `policy:${policyId}`,
-        24 * 60 * 60, // 24 hours
-        JSON.stringify(policy)
-      );
-      
-      // Apply policy
-      await this.applyPolicy(policy);
-      
-      logger.info(`Segmentation policy created: ${policyId}`, {
-        name,
-        createdBy
-      });
-      
-      // Emit event
-      this.emit('policyCreated', policy);
-      
-      return policy;
-    } catch (error) {
-      logger.error('Error creating policy:', error);
-      throw error;
-    }
-  }
-
-  async updatePolicy(policyId, updates, updatedBy) {
-    try {
-      const policy = this.policies.get(policyId);
-      if (!policy) {
-        throw new Error('Policy not found');
-      }
-      
-      // Update policy
-      Object.assign(policy, updates, {
-        updated_by: updatedBy,
-        updated_at: new Date()
-      });
-      
-      // Update database
-      await pool.query(`
-        UPDATE segmentation_policies
-        SET name = $1, description = $2, rules = $3, network_config = $4, 
-            priority = $5, is_active = $6, updated_by = $7, updated_at = $8
-        WHERE id = $9
-      `, [
-        policy.name, policy.description, JSON.stringify(policy.rules),
-        JSON.stringify(policy.networkConfig), policy.priority, policy.is_active,
-        updatedBy, policy.updated_at, policyId
-      ]);
-      
-      // Update Redis
-      await this.redis.setex(
-        `policy:${policyId}`,
-        24 * 60 * 60,
-        JSON.stringify(policy)
-      );
-      
-      // Reapply policy
-      await this.applyPolicy(policy);
-      
-      logger.info(`Segmentation policy updated: ${policyId}`, {
-        updatedBy,
-        updates: Object.keys(updates)
-      });
-      
-      // Emit event
-      this.emit('policyUpdated', policy);
-      
-      return policy;
-    } catch (error) {
-      logger.error('Error updating policy:', error);
-      throw error;
-    }
-  }
-
-  async deletePolicy(policyId, deletedBy) {
-    try {
-      const policy = this.policies.get(policyId);
-      if (!policy) {
-        throw new Error('Policy not found');
-      }
-      
-      // Soft delete
-      policy.is_active = false;
-      policy.deleted_by = deletedBy;
-      policy.deleted_at = new Date();
-      
-      // Update database
-      await pool.query(`
-        UPDATE segmentation_policies
-        SET is_active = false, deleted_by = $1, deleted_at = $2, updated_at = $3
-        WHERE id = $4
-      `, [deletedBy, policy.deleted_at, new Date(), policyId]);
-      
-      // Remove from memory
-      this.policies.delete(policyId);
-      
-      // Remove from Redis
-      await this.redis.del(`policy:${policyId}`);
-      
-      // Remove policy from enforcement points
-      await this.removePolicyFromEnforcementPoints(policyId);
-      
-      logger.info(`Segmentation policy deleted: ${policyId}`, {
-        deletedBy
-      });
-      
-      // Emit event
-      this.emit('policyDeleted', policy);
-      
-      return true;
-    } catch (error) {
-      logger.error('Error deleting policy:', error);
-      throw error;
-    }
-  }
-
-  async applyPolicy(policy) {
-    try {
-      const { rules, networkConfig } = policy;
-      
-      // Apply rules to enforcement points
-      for (const [pointId, point] of this.enforcementPoints.entries()) {
-        if (point.is_active) {
-          await this.applyRulesToEnforcementPoint(pointId, rules);
-        }
-      }
-      
-      // Apply network configuration
-      if (networkConfig && Object.keys(networkConfig).length > 0) {
-        await this.applyNetworkConfiguration(networkConfig);
-      }
-      
-      logger.info(`Policy applied: ${policy.id}`, {
-        rulesCount: rules.length,
-        enforcementPoints: this.enforcementPoints.size
-      });
-    } catch (error) {
-      logger.error('Error applying policy:', error);
-      throw error;
-    }
-  }
-
-  async applyRulesToEnforcementPoint(pointId, rules) {
-    try {
-      const point = this.enforcementPoints.get(pointId);
-      if (!point) {
-        return;
-      }
-      
-      // Apply each rule to the enforcement point
-      for (const rule of rules) {
-        await this.applyRuleToEnforcementPoint(pointId, rule);
-      }
-      
-      logger.info(`Rules applied to enforcement point: ${pointId}`, {
-        rulesCount: rules.length
-      });
-    } catch (error) {
-      logger.error('Error applying rules to enforcement point:', error);
-    }
-  }
-
-  async applyRuleToEnforcementPoint(pointId, rule) {
-    try {
-      const point = this.enforcementPoints.get(pointId);
-      if (!point) {
-        return;
-      }
-      
-      const { type, conditions, actions } = rule;
-      
-      // Check if rule conditions are met
-      if (conditions && conditions.length > 0) {
-        const isApplicable = await this.evaluateRuleConditions(conditions, point);
-        if (!isApplicable) {
-          return; // Rule doesn't apply to this enforcement point
-        }
-      }
-      
-      // Apply rule actions
-      for (const action of actions) {
-        await this.executeRuleAction(pointId, action);
-      }
-      
-      logger.info(`Rule applied to enforcement point: ${pointId}`, {
-        ruleType: type,
-        actionsCount: actions.length
-      });
-    } catch (error) {
-      logger.error('Error applying rule to enforcement point:', error);
-    }
-  }
-
-  async evaluateRuleConditions(conditions, point) {
-    try {
-      for (const condition of conditions) {
-        if (!await this.evaluateCondition(condition, point)) {
-          return false;
-        }
-      }
-      return true;
-    } catch (error) {
-      logger.error('Error evaluating rule conditions:', error);
+      logger.error('Error checking network isolation:', error);
       return false;
     }
   }
 
-  async evaluateCondition(condition, point) {
+  async checkDataEncryptionRequirement(resource) {
     try {
-      const { type, field, operator, value } = condition;
-      const pointValue = this.getFieldValue(point, field);
+      const query = `
+        SELECT requires_encryption 
+        FROM resources 
+        WHERE name = $1 AND requires_encryption = true
+      `;
       
-      switch (type) {
-        case 'equals':
-          return pointValue === value;
-        case 'not_equals':
-          return pointValue !== value;
-        case 'contains':
-          return pointValue && pointValue.includes(value);
-        case 'not_contains':
-          return !pointValue || !pointValue.includes(value);
-        case 'in':
-          return value.includes(pointValue);
-        case 'not_in':
-          return !value.includes(pointValue);
-        case 'greater_than':
-          return pointValue > value;
-        case 'less_than':
-          return pointValue < value;
-        case 'exists':
-          return pointValue !== undefined && pointValue !== null;
-        case 'not_exists':
-          return pointValue === undefined || pointValue === null;
-        default:
-          return false;
-      }
+      const result = await database.query(query, [resource]);
+      return result.rows.length > 0;
     } catch (error) {
-      logger.error('Error evaluating condition:', error);
+      logger.error('Error checking data encryption requirement:', error);
       return false;
     }
   }
 
-  async executeRuleAction(pointId, action) {
+  async getApplicationRestrictions(resource) {
     try {
-      const { type, parameters } = action;
+      const query = 'SELECT restrictions FROM resources WHERE name = $1';
+      const result = await database.query(query, [resource]);
       
-      switch (type) {
-        case 'allow':
-          await this.allowTraffic(pointId, parameters);
-          break;
-        case 'deny':
-          await this.denyTraffic(pointId, parameters);
-          break;
-        case 'redirect':
-          await this.redirectTraffic(pointId, parameters);
-          break;
-        case 'log':
-          await this.logTraffic(pointId, parameters);
-          break;
-        case 'rate_limit':
-          await this.rateLimitTraffic(pointId, parameters);
-          break;
-        case 'encrypt':
-          await this.encryptTraffic(pointId, parameters);
-          break;
-        case 'decrypt':
-          await this.decryptTraffic(pointId, parameters);
-          break;
-        case 'inspect':
-          await this.inspectTraffic(pointId, parameters);
-          break;
-        case 'quarantine':
-          await this.quarantineTraffic(pointId, parameters);
-          break;
-        default:
-          logger.warn(`Unknown rule action type: ${type}`);
-      }
-    } catch (error) {
-      logger.error('Error executing rule action:', error);
-    }
-  }
-
-  async allowTraffic(pointId, parameters) {
-    try {
-      const { source, destination, protocol, port, duration } = parameters;
-      
-      // Implementation for allowing traffic
-      logger.info(`Traffic allowed at enforcement point: ${pointId}`, {
-        source,
-        destination,
-        protocol,
-        port,
-        duration
-      });
-    } catch (error) {
-      logger.error('Error allowing traffic:', error);
-    }
-  }
-
-  async denyTraffic(pointId, parameters) {
-    try {
-      const { source, destination, protocol, port, reason } = parameters;
-      
-      // Implementation for denying traffic
-      logger.info(`Traffic denied at enforcement point: ${pointId}`, {
-        source,
-        destination,
-        protocol,
-        port,
-        reason
-      });
-    } catch (error) {
-      logger.error('Error denying traffic:', error);
-    }
-  }
-
-  async redirectTraffic(pointId, parameters) {
-    try {
-      const { source, destination, redirectTo, protocol, port } = parameters;
-      
-      // Implementation for redirecting traffic
-      logger.info(`Traffic redirected at enforcement point: ${pointId}`, {
-        source,
-        destination,
-        redirectTo,
-        protocol,
-        port
-      });
-    } catch (error) {
-      logger.error('Error redirecting traffic:', error);
-    }
-  }
-
-  async logTraffic(pointId, parameters) {
-    try {
-      const { source, destination, protocol, port, level, data } = parameters;
-      
-      // Implementation for logging traffic
-      logger.info(`Traffic logged at enforcement point: ${pointId}`, {
-        source,
-        destination,
-        protocol,
-        port,
-        level,
-        data
-      });
-    } catch (error) {
-      logger.error('Error logging traffic:', error);
-    }
-  }
-
-  async rateLimitTraffic(pointId, parameters) {
-    try {
-      const { source, destination, protocol, port, rate, burst } = parameters;
-      
-      // Implementation for rate limiting traffic
-      logger.info(`Traffic rate limited at enforcement point: ${pointId}`, {
-        source,
-        destination,
-        protocol,
-        port,
-        rate,
-        burst
-      });
-    } catch (error) {
-      logger.error('Error rate limiting traffic:', error);
-    }
-  }
-
-  async encryptTraffic(pointId, parameters) {
-    try {
-      const { source, destination, protocol, port, algorithm, key } = parameters;
-      
-      // Implementation for encrypting traffic
-      logger.info(`Traffic encrypted at enforcement point: ${pointId}`, {
-        source,
-        destination,
-        protocol,
-        port,
-        algorithm
-      });
-    } catch (error) {
-      logger.error('Error encrypting traffic:', error);
-    }
-  }
-
-  async decryptTraffic(pointId, parameters) {
-    try {
-      const { source, destination, protocol, port, algorithm, key } = parameters;
-      
-      // Implementation for decrypting traffic
-      logger.info(`Traffic decrypted at enforcement point: ${pointId}`, {
-        source,
-        destination,
-        protocol,
-        port,
-        algorithm
-      });
-    } catch (error) {
-      logger.error('Error decrypting traffic:', error);
-    }
-  }
-
-  async inspectTraffic(pointId, parameters) {
-    try {
-      const { source, destination, protocol, port, inspectionType, rules } = parameters;
-      
-      // Implementation for inspecting traffic
-      logger.info(`Traffic inspected at enforcement point: ${pointId}`, {
-        source,
-        destination,
-        protocol,
-        port,
-        inspectionType,
-        rulesCount: rules ? rules.length : 0
-      });
-    } catch (error) {
-      logger.error('Error inspecting traffic:', error);
-    }
-  }
-
-  async quarantineTraffic(pointId, parameters) {
-    try {
-      const { source, destination, protocol, port, duration, reason } = parameters;
-      
-      // Implementation for quarantining traffic
-      logger.info(`Traffic quarantined at enforcement point: ${pointId}`, {
-        source,
-        destination,
-        protocol,
-        port,
-        duration,
-        reason
-      });
-    } catch (error) {
-      logger.error('Error quarantining traffic:', error);
-    }
-  }
-
-  async applyNetworkConfiguration(networkConfig) {
-    try {
-      const { segments, routes, firewalls, loadBalancers, vpns } = networkConfig;
-      
-      // Apply segments
-      if (segments && segments.length > 0) {
-        await this.applySegments(segments);
+      if (result.rows.length === 0) {
+        return null;
       }
       
-      // Apply routes
-      if (routes && routes.length > 0) {
-        await this.applyRoutes(routes);
-      }
-      
-      // Apply firewalls
-      if (firewalls && firewalls.length > 0) {
-        await this.applyFirewalls(firewalls);
-      }
-      
-      // Apply load balancers
-      if (loadBalancers && loadBalancers.length > 0) {
-        await this.applyLoadBalancers(loadBalancers);
-      }
-      
-      // Apply VPNs
-      if (vpns && vpns.length > 0) {
-        await this.applyVPNs(vpns);
-      }
-      
-      logger.info('Network configuration applied', {
-        segments: segments ? segments.length : 0,
-        routes: routes ? routes.length : 0,
-        firewalls: firewalls ? firewalls.length : 0,
-        loadBalancers: loadBalancers ? loadBalancers.length : 0,
-        vpns: vpns ? vpns.length : 0
-      });
+      return result.rows[0].restrictions;
     } catch (error) {
-      logger.error('Error applying network configuration:', error);
-      throw error;
-    }
-  }
-
-  async applySegments(segments) {
-    try {
-      for (const segment of segments) {
-        await this.applySegment(segment);
-      }
-    } catch (error) {
-      logger.error('Error applying segments:', error);
-    }
-  }
-
-  async applySegment(segment) {
-    try {
-      const { id, name, network, rules, conditions } = segment;
-      
-      // Store segment
-      this.segments.set(id, {
-        id,
-        name,
-        network,
-        rules: rules || [],
-        conditions: conditions || [],
-        is_active: true,
-        created_at: new Date(),
-        updated_at: new Date()
-      });
-      
-      // Apply segment rules
-      if (rules && rules.length > 0) {
-        for (const rule of rules) {
-          await this.applySegmentRule(id, rule);
-        }
-      }
-      
-      logger.info(`Segment applied: ${id}`, {
-        name,
-        network,
-        rulesCount: rules ? rules.length : 0
-      });
-    } catch (error) {
-      logger.error('Error applying segment:', error);
-    }
-  }
-
-  async applySegmentRule(segmentId, rule) {
-    try {
-      const { type, conditions, actions } = rule;
-      
-      // Apply rule to all enforcement points in the segment
-      for (const [pointId, point] of this.enforcementPoints.entries()) {
-        if (point.segment_id === segmentId && point.is_active) {
-          await this.applyRuleToEnforcementPoint(pointId, rule);
-        }
-      }
-    } catch (error) {
-      logger.error('Error applying segment rule:', error);
-    }
-  }
-
-  async applyRoutes(routes) {
-    try {
-      for (const route of routes) {
-        await this.applyRoute(route);
-      }
-    } catch (error) {
-      logger.error('Error applying routes:', error);
-    }
-  }
-
-  async applyRoute(route) {
-    try {
-      const { destination, gateway, interface, metric, type } = route;
-      
-      // Implementation for applying route
-      logger.info(`Route applied: ${destination}`, {
-        gateway,
-        interface,
-        metric,
-        type
-      });
-    } catch (error) {
-      logger.error('Error applying route:', error);
-    }
-  }
-
-  async applyFirewalls(firewalls) {
-    try {
-      for (const firewall of firewalls) {
-        await this.applyFirewall(firewall);
-      }
-    } catch (error) {
-      logger.error('Error applying firewalls:', error);
-    }
-  }
-
-  async applyFirewall(firewall) {
-    try {
-      const { name, rules, interface, direction } = firewall;
-      
-      // Implementation for applying firewall
-      logger.info(`Firewall applied: ${name}`, {
-        rulesCount: rules ? rules.length : 0,
-        interface,
-        direction
-      });
-    } catch (error) {
-      logger.error('Error applying firewall:', error);
-    }
-  }
-
-  async applyLoadBalancers(loadBalancers) {
-    try {
-      for (const lb of loadBalancers) {
-        await this.applyLoadBalancer(lb);
-      }
-    } catch (error) {
-      logger.error('Error applying load balancers:', error);
-    }
-  }
-
-  async applyLoadBalancer(loadBalancer) {
-    try {
-      const { name, algorithm, backends, healthCheck } = loadBalancer;
-      
-      // Implementation for applying load balancer
-      logger.info(`Load balancer applied: ${name}`, {
-        algorithm,
-        backendsCount: backends ? backends.length : 0,
-        healthCheck
-      });
-    } catch (error) {
-      logger.error('Error applying load balancer:', error);
-    }
-  }
-
-  async applyVPNs(vpns) {
-    try {
-      for (const vpn of vpns) {
-        await this.applyVPN(vpn);
-      }
-    } catch (error) {
-      logger.error('Error applying VPNs:', error);
-    }
-  }
-
-  async applyVPN(vpn) {
-    try {
-      const { name, type, endpoints, encryption, authentication } = vpn;
-      
-      // Implementation for applying VPN
-      logger.info(`VPN applied: ${name}`, {
-        type,
-        endpointsCount: endpoints ? endpoints.length : 0,
-        encryption,
-        authentication
-      });
-    } catch (error) {
-      logger.error('Error applying VPN:', error);
-    }
-  }
-
-  async removePolicyFromEnforcementPoints(policyId) {
-    try {
-      for (const [pointId, point] of this.enforcementPoints.entries()) {
-        if (point.is_active) {
-          await this.removePolicyFromEnforcementPoint(pointId, policyId);
-        }
-      }
-    } catch (error) {
-      logger.error('Error removing policy from enforcement points:', error);
-    }
-  }
-
-  async removePolicyFromEnforcementPoint(pointId, policyId) {
-    try {
-      const point = this.enforcementPoints.get(pointId);
-      if (!point) {
-        return;
-      }
-      
-      // Implementation for removing policy from enforcement point
-      logger.info(`Policy removed from enforcement point: ${pointId}`, {
-        policyId
-      });
-    } catch (error) {
-      logger.error('Error removing policy from enforcement point:', error);
-    }
-  }
-
-  async getStatus(userId) {
-    try {
-      const status = {
-        segments: {
-          total: this.segments.size,
-          active: Array.from(this.segments.values()).filter(s => s.is_active).length
-        },
-        policies: {
-          total: this.policies.size,
-          active: Array.from(this.policies.values()).filter(p => p.is_active).length
-        },
-        rules: {
-          total: this.rules.size,
-          active: Array.from(this.rules.values()).filter(r => r.is_active).length
-        },
-        enforcementPoints: {
-          total: this.enforcementPoints.size,
-          active: Array.from(this.enforcementPoints.values()).filter(p => p.is_active).length
-        },
-        networkConfigs: {
-          total: this.networkConfigs.size,
-          active: Array.from(this.networkConfigs.values()).filter(c => c.is_active).length
-        }
-      };
-      
-      return status;
-    } catch (error) {
-      logger.error('Error getting status:', error);
-      throw error;
-    }
-  }
-
-  getFieldValue(point, field) {
-    try {
-      const fields = field.split('.');
-      let value = point;
-      
-      for (const f of fields) {
-        if (value && typeof value === 'object' && f in value) {
-          value = value[f];
-        } else {
-          return null;
-        }
-      }
-      
-      return value;
-    } catch (error) {
-      logger.error('Error getting field value:', error);
+      logger.error('Error getting application restrictions:', error);
       return null;
     }
   }
 
-  async getSegmentationStats() {
+  checkApplicationRestrictions(userId, restrictions, context) {
     try {
-      const stats = {
-        totalSegments: this.segments.size,
-        activeSegments: Array.from(this.segments.values()).filter(s => s.is_active).length,
-        totalPolicies: this.policies.size,
-        activePolicies: Array.from(this.policies.values()).filter(p => p.is_active).length,
-        totalRules: this.rules.size,
-        activeRules: Array.from(this.rules.values()).filter(r => r.is_active).length,
-        totalEnforcementPoints: this.enforcementPoints.size,
-        activeEnforcementPoints: Array.from(this.enforcementPoints.values()).filter(p => p.is_active).length
-      };
+      if (!restrictions) {
+        return true;
+      }
       
-      return stats;
+      // Check time restrictions
+      if (restrictions.timeRestrictions) {
+        const currentHour = new Date().getHours();
+        if (restrictions.timeRestrictions.allowedHours && 
+            !restrictions.timeRestrictions.allowedHours.includes(currentHour)) {
+          return false;
+        }
+      }
+      
+      // Check device restrictions
+      if (restrictions.deviceRestrictions && context.deviceId) {
+        if (restrictions.deviceRestrictions.allowedDevices && 
+            !restrictions.deviceRestrictions.allowedDevices.includes(context.deviceId)) {
+          return false;
+        }
+      }
+      
+      // Check location restrictions
+      if (restrictions.locationRestrictions && context.location) {
+        if (restrictions.locationRestrictions.allowedLocations && 
+            !restrictions.locationRestrictions.allowedLocations.includes(context.location)) {
+          return false;
+        }
+      }
+      
+      return true;
     } catch (error) {
-      logger.error('Error getting segmentation stats:', error);
-      throw error;
+      logger.error('Error checking application restrictions:', error);
+      return false;
+    }
+  }
+
+  async createSecurityProfile(userId, profileData) {
+    try {
+      const query = `
+        INSERT INTO user_security_profiles 
+        (user_id, security_level, network_segments, data_access_level, 
+         application_access, restrictions, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        ON CONFLICT (user_id) DO UPDATE SET
+          security_level = $2,
+          network_segments = $3,
+          data_access_level = $4,
+          application_access = $5,
+          restrictions = $6,
+          updated_at = NOW()
+      `;
+      
+      await database.query(query, [
+        userId,
+        profileData.securityLevel,
+        JSON.stringify(profileData.networkSegments),
+        profileData.dataAccessLevel,
+        JSON.stringify(profileData.applicationAccess),
+        JSON.stringify(profileData.restrictions)
+      ]);
+      
+      return true;
+    } catch (error) {
+      logger.error('Error creating security profile:', error);
+      return false;
+    }
+  }
+
+  async updateSecurityProfile(userId, profileData) {
+    try {
+      const query = `
+        UPDATE user_security_profiles 
+        SET security_level = $2,
+            network_segments = $3,
+            data_access_level = $4,
+            application_access = $5,
+            restrictions = $6,
+            updated_at = NOW()
+        WHERE user_id = $1
+      `;
+      
+      await database.query(query, [
+        userId,
+        profileData.securityLevel,
+        JSON.stringify(profileData.networkSegments),
+        profileData.dataAccessLevel,
+        JSON.stringify(profileData.applicationAccess),
+        JSON.stringify(profileData.restrictions)
+      ]);
+      
+      return true;
+    } catch (error) {
+      logger.error('Error updating security profile:', error);
+      return false;
     }
   }
 }
 
-module.exports = MicroSegmentation;
+module.exports = new MicroSegmentation();
+

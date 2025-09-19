@@ -9,188 +9,53 @@ const connectDatabase = async () => {
       return pool;
     }
 
-    const dbConfig = {
-      connectionString: process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/brokerage',
-      max: parseInt(process.env.DB_MAX_CONNECTIONS) || 20,
-      min: parseInt(process.env.DB_MIN_CONNECTIONS) || 5,
-      idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT) || 30000,
-      connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT) || 10000,
-      statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT) || 30000,
-      query_timeout: parseInt(process.env.DB_QUERY_TIMEOUT) || 30000,
-      application_name: 'market-data-processing',
-      keepAlive: true,
-      keepAliveInitialDelayMillis: 10000
+    const config = {
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 5432,
+      database: process.env.DB_NAME || 'brokerage_market_data',
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'password',
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
     };
 
-    pool = new Pool(dbConfig);
-
-    // Event handlers
-    pool.on('connect', (client) => {
-      logger.info('New database client connected', {
-        totalCount: pool.totalCount,
-        idleCount: pool.idleCount,
-        waitingCount: pool.waitingCount
-      });
-    });
-
-    pool.on('acquire', (client) => {
-      logger.debug('Database client acquired', {
-        totalCount: pool.totalCount,
-        idleCount: pool.idleCount,
-        waitingCount: pool.waitingCount
-      });
-    });
-
-    pool.on('remove', (client) => {
-      logger.info('Database client removed', {
-        totalCount: pool.totalCount,
-        idleCount: pool.idleCount,
-        waitingCount: pool.waitingCount
-      });
-    });
-
-    pool.on('error', (err, client) => {
-      logger.error('Database pool error:', err);
-    });
+    pool = new Pool(config);
 
     // Test connection
     const client = await pool.connect();
     await client.query('SELECT NOW()');
     client.release();
-    
-    logger.info('Database connection test successful', {
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 5432,
-      database: process.env.DB_NAME || 'brokerage'
-    });
 
+    logger.info('Database connected successfully');
     return pool;
   } catch (error) {
-    logger.error('Failed to connect to database:', error);
+    logger.error('Database connection failed:', error);
     throw error;
   }
 };
 
-const getPool = () => {
+const getDatabase = () => {
   if (!pool) {
-    throw new Error('Database pool not initialized. Call connectDatabase() first.');
+    throw new Error('Database not connected. Call connectDatabase() first.');
   }
   return pool;
 };
 
-const disconnectDatabase = async () => {
+const closeDatabase = async () => {
   try {
     if (pool) {
       await pool.end();
       pool = null;
-      logger.info('Database pool disconnected');
+      logger.info('Database connection closed');
     }
   } catch (error) {
-    logger.error('Error disconnecting database pool:', error);
-    throw error;
-  }
-};
-
-// Database utility functions
-const dbUtils = {
-  // Execute query with logging
-  async query(text, params = []) {
-    const start = Date.now();
-    const pool = getPool();
-    
-    try {
-      const result = await pool.query(text, params);
-      const duration = Date.now() - start;
-      
-      logger.databaseQuery(text, duration, {
-        rowCount: result.rowCount,
-        command: result.command
-      });
-      
-      return result;
-    } catch (error) {
-      const duration = Date.now() - start;
-      logger.error('Database query failed:', {
-        query: text,
-        params,
-        duration,
-        error: error.message
-      });
-      throw error;
-    }
-  },
-
-  // Execute transaction
-  async transaction(callback) {
-    const pool = getPool();
-    const client = await pool.connect();
-    
-    try {
-      await client.query('BEGIN');
-      const result = await callback(client);
-      await client.query('COMMIT');
-      return result;
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
-  },
-
-  // Get client from pool
-  async getClient() {
-    const pool = getPool();
-    return await pool.connect();
-  },
-
-  // Release client back to pool
-  releaseClient(client) {
-    if (client) {
-      client.release();
-    }
-  },
-
-  // Health check
-  async healthCheck() {
-    try {
-      const result = await this.query('SELECT NOW() as current_time, version() as version');
-      return {
-        status: 'healthy',
-        currentTime: result.rows[0].current_time,
-        version: result.rows[0].version,
-        poolStats: {
-          totalCount: pool.totalCount,
-          idleCount: pool.idleCount,
-          waitingCount: pool.waitingCount
-        }
-      };
-    } catch (error) {
-      logger.error('Database health check failed:', error);
-      return {
-        status: 'unhealthy',
-        error: error.message
-      };
-    }
-  },
-
-  // Get pool statistics
-  getPoolStats() {
-    if (!pool) {
-      return null;
-    }
-    return {
-      totalCount: pool.totalCount,
-      idleCount: pool.idleCount,
-      waitingCount: pool.waitingCount
-    };
+    logger.error('Error closing database connection:', error);
   }
 };
 
 module.exports = {
   connectDatabase,
-  getPool,
-  disconnectDatabase,
-  pool: () => pool,
-  ...dbUtils
+  getDatabase,
+  closeDatabase
 };

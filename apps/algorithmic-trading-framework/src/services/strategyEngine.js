@@ -1,60 +1,116 @@
 const { EventEmitter } = require('events');
-const { nanoid } = require('nanoid');
+const { v4: uuidv4 } = require('uuid');
 const { logger } = require('../utils/logger');
-const { pool } = require('./database');
-const Redis = require('ioredis');
+const { connectRedis } = require('./redis');
+const { connectDatabase } = require('./database');
+const PluginManager = require('./pluginManager');
+const MarketDataProvider = require('./marketDataProvider');
+const RiskManager = require('./riskManager');
 
 class StrategyEngine extends EventEmitter {
   constructor() {
     super();
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: process.env.REDIS_PORT || 6379,
-      password: process.env.REDIS_PASSWORD,
-      retryDelayOnFailover: 100,
-      maxRetriesPerRequest: 3
-    });
-    
     this.strategies = new Map();
     this.activeStrategies = new Map();
-    this.strategyInstances = new Map();
-    this._initialized = false;
+    this.redis = null;
+    this.db = null;
+    this.pluginManager = null;
+    this.marketDataProvider = null;
+    this.riskManager = null;
+    this.isRunning = false;
   }
 
   async initialize() {
     try {
-      // Test Redis connection
-      await this.redis.ping();
+      this.redis = await connectRedis();
+      this.db = await connectDatabase();
+      this.pluginManager = new PluginManager();
+      this.marketDataProvider = new MarketDataProvider();
+      this.riskManager = new RiskManager();
       
-      // Load strategies from database
-      await this.loadStrategies();
+      await this.pluginManager.initialize();
+      await this.marketDataProvider.initialize();
+      await this.riskManager.initialize();
       
-      this._initialized = true;
-      logger.info('StrategyEngine initialized successfully');
+      await this.loadStrategiesFromDatabase();
+      this.startStrategyLoop();
+      
+      logger.info('Strategy Engine initialized successfully');
     } catch (error) {
-      logger.error('Failed to initialize StrategyEngine:', error);
+      logger.error('Failed to initialize Strategy Engine:', error);
       throw error;
     }
   }
 
-  async close() {
+  async loadStrategiesFromDatabase() {
     try {
-      // Stop all active strategies
-      for (const [strategyId, strategy] of this.activeStrategies) {
-        await this.stopStrategy(strategyId, strategy.userId);
+      const query = `
+        SELECT id, name, description, plugin_id, config, symbols, user_id, 
+               status, created_at, updated_at
+        FROM strategies 
+        WHERE status = 'active'
+      `;
+      
+      const result = await this.db.query(query);
+      
+      for (const row of result.rows) {
+        const strategy = {
+          id: row.id,
+          name: row.name,
+          description: row.description,
+          pluginId: row.plugin_id,
+          config: row.config,
+          symbols: row.symbols,
+          userId: row.user_id,
+          status: row.status,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          performance: {
+            totalReturn: 0,
+            sharpeRatio: 0,
+            maxDrawdown: 0,
+            winRate: 0,
+            totalTrades: 0
+          }
+        };
+        
+        this.strategies.set(strategy.id, strategy);
       }
       
-      await this.redis.quit();
-      this._initialized = false;
-      logger.info('StrategyEngine closed');
+      logger.info(`Loaded ${result.rows.length} strategies from database`);
     } catch (error) {
-      logger.error('Error closing StrategyEngine:', error);
+      logger.error('Failed to load strategies from database:', error);
     }
   }
 
   async createStrategy(name, description, pluginId, config, symbols, userId) {
     try {
-      const strategyId = nanoid();
+      // Validate plugin exists
+      const plugins = await this.pluginManager.getAvailablePlugins();
+      const plugin = plugins.find(p => p.id === pluginId);
+      if (!plugin) {
+        throw new Error(`Plugin ${pluginId} not found`);
+      }
+
+      // Validate symbols
+      if (!Array.isArray(symbols) || symbols.length === 0) {
+        throw new Error('At least one symbol is required');
+      }
+
+      // Create strategy record
+      const strategyId = uuidv4();
+      const query = `
+        INSERT INTO strategies (id, name, description, plugin_id, config, symbols, user_id, status, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING *
+      `;
+      
+      const now = new Date();
+      const result = await this.db.query(query, [
+        strategyId, name, description, pluginId, JSON.stringify(config),
+        JSON.stringify(symbols), userId, 'inactive', now, now
+      ]);
+
       const strategy = {
         id: strategyId,
         name,
@@ -63,552 +119,409 @@ class StrategyEngine extends EventEmitter {
         config,
         symbols,
         userId,
-        status: 'created',
-        mode: 'paper', // Default to paper trading
+        status: 'inactive',
+        createdAt: now,
+        updatedAt: now,
         performance: {
           totalReturn: 0,
           sharpeRatio: 0,
           maxDrawdown: 0,
           winRate: 0,
           totalTrades: 0
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        }
       };
 
-      // Store in database
-      await this.storeStrategy(strategy);
-      
-      // Store in memory
       this.strategies.set(strategyId, strategy);
       
-      logger.info(`Strategy created: ${strategyId}`, { name, userId });
+      logger.info(`Strategy ${name} created successfully`, { strategyId, userId });
       this.emit('strategyCreated', strategy);
-      
+
       return strategy;
     } catch (error) {
-      logger.error('Error creating strategy:', error);
+      logger.error('Failed to create strategy:', error);
       throw error;
     }
   }
 
   async getStrategies(userId) {
     try {
-      const strategies = Array.from(this.strategies.values())
-        .filter(strategy => strategy.userId === userId);
-      
-      return strategies;
-    } catch (error) {
-      logger.error('Error getting strategies:', error);
-      throw error;
-    }
-  }
+      const userStrategies = Array.from(this.strategies.values())
+        .filter(strategy => strategy.userId === userId)
+        .map(strategy => ({
+          id: strategy.id,
+          name: strategy.name,
+          description: strategy.description,
+          pluginId: strategy.pluginId,
+          config: strategy.config,
+          symbols: strategy.symbols,
+          status: strategy.status,
+          performance: strategy.performance,
+          createdAt: strategy.createdAt,
+          updatedAt: strategy.updatedAt
+        }));
 
-  async getStrategy(strategyId, userId) {
-    try {
-      const strategy = this.strategies.get(strategyId);
-      if (!strategy) {
-        throw new Error('Strategy not found');
-      }
-      
-      if (strategy.userId !== userId) {
-        throw new Error('Unauthorized');
-      }
-      
-      return strategy;
+      return userStrategies;
     } catch (error) {
-      logger.error('Error getting strategy:', error);
+      logger.error('Failed to get strategies:', error);
       throw error;
     }
   }
 
   async startStrategy(strategyId, mode, userId) {
     try {
-      const strategy = await this.getStrategy(strategyId, userId);
-      
-      if (strategy.status === 'running') {
+      const strategy = this.strategies.get(strategyId);
+      if (!strategy) {
+        throw new Error(`Strategy ${strategyId} not found`);
+      }
+
+      if (strategy.userId !== userId) {
+        throw new Error('Unauthorized access to strategy');
+      }
+
+      if (strategy.status === 'active') {
         throw new Error('Strategy is already running');
       }
 
-      // Load plugin
-      const plugin = await this.loadPlugin(strategy.pluginId);
-      if (!plugin) {
-        throw new Error('Plugin not found');
+      // Load plugin instance
+      const pluginInstance = await this.pluginManager.getPluginInstance(strategy.pluginId);
+      if (!pluginInstance) {
+        throw new Error(`Plugin ${strategy.pluginId} not loaded`);
       }
 
-      // Create strategy instance
-      const instance = new plugin.instance.constructor(strategy.config);
-      
-      // Initialize strategy
-      await this.initializeStrategy(instance, strategy.symbols);
-      
+      // Create strategy execution context
+      const executionContext = {
+        id: strategyId,
+        name: strategy.name,
+        pluginId: strategy.pluginId,
+        config: strategy.config,
+        symbols: strategy.symbols,
+        userId: userId,
+        mode: mode, // 'paper' or 'live'
+        status: 'starting',
+        startedAt: new Date(),
+        lastUpdate: new Date(),
+        trades: [],
+        performance: {
+          totalReturn: 0,
+          sharpeRatio: 0,
+          maxDrawdown: 0,
+          winRate: 0,
+          totalTrades: 0,
+          currentValue: 100000, // Starting capital
+          peakValue: 100000
+        }
+      };
+
+      // Start market data subscription
+      for (const symbol of strategy.symbols) {
+        await this.marketDataProvider.subscribe(symbol, (data) => {
+          this.handleMarketData(strategyId, symbol, data);
+        });
+      }
+
       // Update strategy status
-      strategy.status = 'running';
-      strategy.mode = mode;
-      strategy.startedAt = new Date().toISOString();
-      strategy.updatedAt = new Date().toISOString();
-      
-      // Store in active strategies
-      this.activeStrategies.set(strategyId, strategy);
-      this.strategyInstances.set(strategyId, instance);
-      
+      strategy.status = 'active';
+      this.activeStrategies.set(strategyId, executionContext);
+
       // Update database
-      await this.updateStrategy(strategy);
-      
-      // Start strategy execution
-      this.startStrategyExecution(strategyId);
-      
-      logger.info(`Strategy started: ${strategyId}`, { mode, userId });
-      this.emit('strategyStarted', strategy);
-      
-      return strategy;
+      await this.updateStrategyStatus(strategyId, 'active');
+
+      logger.info(`Strategy ${strategy.name} started successfully`, { strategyId, mode });
+      this.emit('strategyStarted', executionContext);
+
+      return executionContext;
     } catch (error) {
-      logger.error('Error starting strategy:', error);
+      logger.error(`Failed to start strategy ${strategyId}:`, error);
       throw error;
     }
   }
 
   async stopStrategy(strategyId, userId) {
     try {
-      const strategy = await this.getStrategy(strategyId, userId);
-      
-      if (strategy.status !== 'running') {
+      const strategy = this.strategies.get(strategyId);
+      if (!strategy) {
+        throw new Error(`Strategy ${strategyId} not found`);
+      }
+
+      if (strategy.userId !== userId) {
+        throw new Error('Unauthorized access to strategy');
+      }
+
+      if (strategy.status !== 'active') {
         throw new Error('Strategy is not running');
       }
 
-      // Stop strategy execution
-      this.stopStrategyExecution(strategyId);
-      
+      const executionContext = this.activeStrategies.get(strategyId);
+      if (executionContext) {
+        // Unsubscribe from market data
+        for (const symbol of strategy.symbols) {
+          await this.marketDataProvider.unsubscribe(symbol);
+        }
+
+        // Update execution context
+        executionContext.status = 'stopped';
+        executionContext.stoppedAt = new Date();
+
+        // Calculate final performance
+        executionContext.performance = await this.calculatePerformance(executionContext);
+
+        this.activeStrategies.delete(strategyId);
+      }
+
       // Update strategy status
-      strategy.status = 'stopped';
-      strategy.stoppedAt = new Date().toISOString();
-      strategy.updatedAt = new Date().toISOString();
-      
-      // Remove from active strategies
-      this.activeStrategies.delete(strategyId);
-      this.strategyInstances.delete(strategyId);
-      
-      // Update database
-      await this.updateStrategy(strategy);
-      
-      logger.info(`Strategy stopped: ${strategyId}`, { userId });
-      this.emit('strategyStopped', strategy);
-      
-      return strategy;
+      strategy.status = 'inactive';
+      await this.updateStrategyStatus(strategyId, 'inactive');
+
+      logger.info(`Strategy ${strategy.name} stopped successfully`, { strategyId });
+      this.emit('strategyStopped', executionContext);
+
+      return executionContext;
     } catch (error) {
-      logger.error('Error stopping strategy:', error);
+      logger.error(`Failed to stop strategy ${strategyId}:`, error);
       throw error;
     }
   }
 
-  async updateStrategy(strategy) {
+  async handleMarketData(strategyId, symbol, data) {
     try {
-      const query = `
-        UPDATE strategies SET
-          name = $2,
-          description = $3,
-          plugin_id = $4,
-          config = $5,
-          symbols = $6,
-          status = $7,
-          mode = $8,
-          performance = $9,
-          started_at = $10,
-          stopped_at = $11,
-          updated_at = $12
-        WHERE id = $1
-      `;
-      
-      await pool.query(query, [
-        strategy.id,
-        strategy.name,
-        strategy.description,
-        strategy.pluginId,
-        JSON.stringify(strategy.config),
-        JSON.stringify(strategy.symbols),
-        strategy.status,
-        strategy.mode,
-        JSON.stringify(strategy.performance),
-        strategy.startedAt,
-        strategy.stoppedAt,
-        strategy.updatedAt
-      ]);
-      
-    } catch (error) {
-      logger.error('Error updating strategy:', error);
-      throw error;
-    }
-  }
-
-  async storeStrategy(strategy) {
-    try {
-      const query = `
-        INSERT INTO strategies (
-          id, user_id, name, description, plugin_id, config, 
-          symbols, status, mode, performance, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      `;
-      
-      await pool.query(query, [
-        strategy.id,
-        strategy.userId,
-        strategy.name,
-        strategy.description,
-        strategy.pluginId,
-        JSON.stringify(strategy.config),
-        JSON.stringify(strategy.symbols),
-        strategy.status,
-        strategy.mode,
-        JSON.stringify(strategy.performance),
-        strategy.createdAt,
-        strategy.updatedAt
-      ]);
-      
-    } catch (error) {
-      logger.error('Error storing strategy:', error);
-      throw error;
-    }
-  }
-
-  async loadStrategies() {
-    try {
-      const query = 'SELECT * FROM strategies ORDER BY created_at DESC';
-      const result = await pool.query(query);
-      
-      for (const row of result.rows) {
-        const strategy = {
-          id: row.id,
-          name: row.name,
-          description: row.description,
-          pluginId: row.plugin_id,
-          config: JSON.parse(row.config),
-          symbols: JSON.parse(row.symbols),
-          userId: row.user_id,
-          status: row.status,
-          mode: row.mode,
-          performance: JSON.parse(row.performance),
-          startedAt: row.started_at,
-          stoppedAt: row.stopped_at,
-          createdAt: row.created_at,
-          updatedAt: row.updated_at
-        };
-        
-        this.strategies.set(strategy.id, strategy);
-        
-        // If strategy was running, restart it
-        if (strategy.status === 'running') {
-          try {
-            await this.startStrategy(strategy.id, strategy.mode, strategy.userId);
-          } catch (error) {
-            logger.error(`Failed to restart strategy ${strategy.id}:`, error);
-            strategy.status = 'error';
-            await this.updateStrategy(strategy);
-          }
-        }
-      }
-      
-      logger.info(`Loaded ${this.strategies.size} strategies`);
-    } catch (error) {
-      logger.error('Error loading strategies:', error);
-      throw error;
-    }
-  }
-
-  async loadPlugin(pluginId) {
-    try {
-      // This would typically load from the plugin manager
-      // For now, return a mock plugin
-      return {
-        instance: {
-          constructor: class MockStrategy {
-            constructor(config) {
-              this.config = config;
-            }
-            
-            async initialize(symbols) {
-              this.symbols = symbols;
-            }
-            
-            onTick(data) {
-              // Mock strategy logic
-              return null;
-            }
-            
-            getMetrics() {
-              return {};
-            }
-          }
-        }
-      };
-    } catch (error) {
-      logger.error('Error loading plugin:', error);
-      throw error;
-    }
-  }
-
-  async initializeStrategy(instance, symbols) {
-    try {
-      if (typeof instance.initialize === 'function') {
-        await instance.initialize(symbols);
-      }
-    } catch (error) {
-      logger.error('Error initializing strategy:', error);
-      throw error;
-    }
-  }
-
-  startStrategyExecution(strategyId) {
-    try {
-      const strategy = this.activeStrategies.get(strategyId);
-      const instance = this.strategyInstances.get(strategyId);
-      
-      if (!strategy || !instance) {
-        throw new Error('Strategy or instance not found');
-      }
-
-      // Start execution loop
-      const executionInterval = setInterval(async () => {
-        try {
-          await this.executeStrategy(strategyId);
-        } catch (error) {
-          logger.error(`Strategy execution error for ${strategyId}:`, error);
-          this.emit('strategyError', error, strategy);
-        }
-      }, 1000); // Execute every second
-
-      // Store interval ID for cleanup
-      strategy.executionInterval = executionInterval;
-      this.activeStrategies.set(strategyId, strategy);
-      
-    } catch (error) {
-      logger.error('Error starting strategy execution:', error);
-      throw error;
-    }
-  }
-
-  stopStrategyExecution(strategyId) {
-    try {
-      const strategy = this.activeStrategies.get(strategyId);
-      
-      if (strategy && strategy.executionInterval) {
-        clearInterval(strategy.executionInterval);
-        delete strategy.executionInterval;
-      }
-      
-    } catch (error) {
-      logger.error('Error stopping strategy execution:', error);
-    }
-  }
-
-  async executeStrategy(strategyId) {
-    try {
-      const strategy = this.activeStrategies.get(strategyId);
-      const instance = this.strategyInstances.get(strategyId);
-      
-      if (!strategy || !instance) {
+      const executionContext = this.activeStrategies.get(strategyId);
+      if (!executionContext || executionContext.status !== 'active') {
         return;
       }
 
-      // Get market data for all symbols
-      const marketData = await this.getMarketData(strategy.symbols);
-      
-      // Execute strategy for each symbol
-      for (const symbol of strategy.symbols) {
-        const symbolData = marketData[symbol];
-        if (!symbolData || symbolData.length === 0) {
-          continue;
-        }
+      const strategy = this.strategies.get(strategyId);
+      if (!strategy) {
+        return;
+      }
 
-        try {
-          const signal = instance.onTick(symbolData);
-          
-          if (signal) {
-            await this.processSignal(strategyId, symbol, signal);
+      // Get plugin instance
+      const pluginInstance = await this.pluginManager.getPluginInstance(strategy.pluginId);
+      if (!pluginInstance) {
+        logger.error(`Plugin instance not found for strategy ${strategyId}`);
+        return;
+      }
+
+      // Process data through plugin
+      const signal = pluginInstance.instance.onData(data);
+      
+      if (signal) {
+        // Validate signal with risk manager
+        const riskCheck = await this.riskManager.validateTrade({
+          symbol: symbol,
+          action: signal.action,
+          quantity: signal.quantity,
+          price: data.close,
+          userId: executionContext.userId,
+          strategyId: strategyId
+        });
+
+        if (riskCheck.approved) {
+          // Execute trade
+          const trade = await this.executeTrade(strategyId, symbol, signal, data);
+          if (trade) {
+            executionContext.trades.push(trade);
+            executionContext.lastUpdate = new Date();
+            
+            // Update performance
+            executionContext.performance = await this.calculatePerformance(executionContext);
+            
+            // Emit trade event
+            this.emit('tradeExecuted', { strategyId, trade, executionContext });
           }
-        } catch (error) {
-          logger.error(`Error executing strategy for symbol ${symbol}:`, error);
+        } else {
+          logger.warn(`Trade rejected by risk manager for strategy ${strategyId}:`, riskCheck.reason);
         }
       }
-      
-      // Update strategy metrics
-      await this.updateStrategyMetrics(strategyId, instance);
-      
+
+      // Update strategy state
+      executionContext.lastUpdate = new Date();
+      this.activeStrategies.set(strategyId, executionContext);
+
     } catch (error) {
-      logger.error(`Error executing strategy ${strategyId}:`, error);
-      throw error;
+      logger.error(`Error handling market data for strategy ${strategyId}:`, error);
+      this.emit('strategyError', error, { id: strategyId, symbol });
     }
   }
 
-  async getMarketData(symbols) {
+  async executeTrade(strategyId, symbol, signal, marketData) {
     try {
-      const marketData = {};
-      
-      for (const symbol of symbols) {
-        // Get data from Redis cache
-        const data = await this.redis.get(`market_data:${symbol}`);
-        if (data) {
-          marketData[symbol] = JSON.parse(data);
-        }
+      const executionContext = this.activeStrategies.get(strategyId);
+      if (!executionContext) {
+        return null;
       }
-      
-      return marketData;
-    } catch (error) {
-      logger.error('Error getting market data:', error);
-      return {};
-    }
-  }
 
-  async processSignal(strategyId, symbol, signal) {
-    try {
-      const strategy = this.activeStrategies.get(strategyId);
-      
-      // Create trade signal
-      const tradeSignal = {
-        id: nanoid(),
-        strategyId,
-        symbol,
+      const trade = {
+        id: uuidv4(),
+        strategyId: strategyId,
+        symbol: symbol,
         action: signal.action,
-        confidence: signal.confidence,
+        quantity: signal.quantity,
+        price: marketData.close,
+        timestamp: new Date(),
         reason: signal.reason,
-        timestamp: new Date().toISOString(),
-        processed: false
+        status: 'executed'
       };
-      
-      // Store signal
-      await this.storeSignal(tradeSignal);
-      
-      // Process based on strategy mode
-      if (strategy.mode === 'paper') {
-        await this.processPaperTrade(tradeSignal);
-      } else if (strategy.mode === 'live') {
-        await this.processLiveTrade(tradeSignal);
+
+      // In paper trading mode, just record the trade
+      if (executionContext.mode === 'paper') {
+        trade.mode = 'paper';
+        logger.info(`Paper trade executed for strategy ${strategyId}:`, trade);
+        return trade;
       }
+
+      // In live mode, send to order management system
+      // This would integrate with the actual trading system
+      trade.mode = 'live';
+      logger.info(`Live trade executed for strategy ${strategyId}:`, trade);
       
-      logger.info(`Signal processed: ${tradeSignal.id}`, { 
-        strategyId, symbol, action: signal.action 
-      });
-      
-      this.emit('signalGenerated', tradeSignal);
-      
+      // TODO: Integrate with actual order management system
+      // await this.orderManagementSystem.placeOrder(trade);
+
+      return trade;
     } catch (error) {
-      logger.error('Error processing signal:', error);
-      throw error;
+      logger.error(`Failed to execute trade for strategy ${strategyId}:`, error);
+      return null;
     }
   }
 
-  async processPaperTrade(signal) {
+  async calculatePerformance(executionContext) {
     try {
-      // Mock paper trading logic
-      logger.info(`Paper trade executed: ${signal.symbol} ${signal.action}`);
+      const trades = executionContext.trades;
+      if (trades.length === 0) {
+        return executionContext.performance;
+      }
+
+      let totalReturn = 0;
+      let winningTrades = 0;
+      let maxDrawdown = 0;
+      let currentValue = executionContext.performance.currentValue;
+      let peakValue = executionContext.performance.peakValue;
+
+      // Calculate returns for each trade
+      for (const trade of trades) {
+        const tradeValue = trade.quantity * trade.price;
+        if (trade.action === 'BUY') {
+          currentValue -= tradeValue;
+        } else if (trade.action === 'SELL') {
+          currentValue += tradeValue;
+          if (tradeValue > 0) {
+            winningTrades++;
+          }
+        }
+
+        // Update peak value and calculate drawdown
+        if (currentValue > peakValue) {
+          peakValue = currentValue;
+        }
+        
+        const drawdown = (peakValue - currentValue) / peakValue;
+        if (drawdown > maxDrawdown) {
+          maxDrawdown = drawdown;
+        }
+      }
+
+      totalReturn = (currentValue - 100000) / 100000; // Assuming starting capital of 100k
+      const winRate = trades.length > 0 ? (winningTrades / trades.length) * 100 : 0;
+
+      // Calculate Sharpe ratio (simplified)
+      const sharpeRatio = totalReturn > 0 ? totalReturn / Math.max(maxDrawdown, 0.01) : 0;
+
+      return {
+        totalReturn: totalReturn * 100, // Convert to percentage
+        sharpeRatio: sharpeRatio,
+        maxDrawdown: maxDrawdown * 100, // Convert to percentage
+        winRate: winRate,
+        totalTrades: trades.length,
+        currentValue: currentValue,
+        peakValue: peakValue
+      };
     } catch (error) {
-      logger.error('Error processing paper trade:', error);
-      throw error;
+      logger.error('Error calculating performance:', error);
+      return executionContext.performance;
     }
   }
 
-  async processLiveTrade(signal) {
-    try {
-      // Send to order management system
-      logger.info(`Live trade executed: ${signal.symbol} ${signal.action}`);
-    } catch (error) {
-      logger.error('Error processing live trade:', error);
-      throw error;
-    }
-  }
-
-  async storeSignal(signal) {
+  async updateStrategyStatus(strategyId, status) {
     try {
       const query = `
-        INSERT INTO strategy_signals (
-          id, strategy_id, symbol, action, confidence, reason, 
-          timestamp, processed
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        UPDATE strategies 
+        SET status = $1, updated_at = $2 
+        WHERE id = $3
       `;
       
-      await pool.query(query, [
-        signal.id,
-        signal.strategyId,
-        signal.symbol,
-        signal.action,
-        signal.confidence,
-        signal.reason,
-        signal.timestamp,
-        signal.processed
-      ]);
-      
+      await this.db.query(query, [status, new Date(), strategyId]);
     } catch (error) {
-      logger.error('Error storing signal:', error);
-      throw error;
+      logger.error(`Failed to update strategy status for ${strategyId}:`, error);
     }
   }
 
-  async updateStrategyMetrics(strategyId, instance) {
-    try {
-      const strategy = this.activeStrategies.get(strategyId);
-      if (!strategy) return;
+  startStrategyLoop() {
+    this.isRunning = true;
+    
+    const loop = async () => {
+      if (!this.isRunning) return;
 
-      // Get metrics from strategy instance
-      const metrics = instance.getMetrics();
-      
-      // Update strategy performance
-      strategy.performance = {
-        ...strategy.performance,
-        ...metrics,
-        lastUpdated: new Date().toISOString()
-      };
-      
-      this.activeStrategies.set(strategyId, strategy);
-      
-    } catch (error) {
-      logger.error('Error updating strategy metrics:', error);
-    }
-  }
+      try {
+        // Update performance for all active strategies
+        for (const [strategyId, executionContext] of this.activeStrategies) {
+          if (executionContext.status === 'active') {
+            executionContext.performance = await this.calculatePerformance(executionContext);
+            this.activeStrategies.set(strategyId, executionContext);
+          }
+        }
 
-  async getStrategyPerformance(strategyId, userId) {
-    try {
-      const strategy = await this.getStrategy(strategyId, userId);
-      return strategy.performance;
-    } catch (error) {
-      logger.error('Error getting strategy performance:', error);
-      throw error;
-    }
-  }
-
-  async getActiveStrategies(userId) {
-    try {
-      const activeStrategies = Array.from(this.activeStrategies.values())
-        .filter(strategy => strategy.userId === userId);
-      
-      return activeStrategies;
-    } catch (error) {
-      logger.error('Error getting active strategies:', error);
-      throw error;
-    }
-  }
-
-  async deleteStrategy(strategyId, userId) {
-    try {
-      const strategy = await this.getStrategy(strategyId, userId);
-      
-      // Stop strategy if running
-      if (strategy.status === 'running') {
-        await this.stopStrategy(strategyId, userId);
+        // Check for strategy health
+        await this.checkStrategyHealth();
+      } catch (error) {
+        logger.error('Error in strategy loop:', error);
       }
+
+      // Run every 5 seconds
+      setTimeout(loop, 5000);
+    };
+
+    loop();
+  }
+
+  async checkStrategyHealth() {
+    const now = new Date();
+    const timeout = 5 * 60 * 1000; // 5 minutes
+
+    for (const [strategyId, executionContext] of this.activeStrategies) {
+      if (executionContext.status === 'active') {
+        const timeSinceUpdate = now - executionContext.lastUpdate;
+        
+        if (timeSinceUpdate > timeout) {
+          logger.warn(`Strategy ${strategyId} appears to be unresponsive`);
+          this.emit('strategyError', new Error('Strategy unresponsive'), { id: strategyId });
+        }
+      }
+    }
+  }
+
+  async close() {
+    try {
+      this.isRunning = false;
       
-      // Delete from database
-      const query = 'DELETE FROM strategies WHERE id = $1 AND user_id = $2';
-      await pool.query(query, [strategyId, userId]);
-      
-      // Remove from memory
-      this.strategies.delete(strategyId);
-      
-      logger.info(`Strategy deleted: ${strategyId}`, { userId });
-      this.emit('strategyDeleted', strategy);
-      
-      return true;
+      // Stop all active strategies
+      for (const [strategyId, executionContext] of this.activeStrategies) {
+        await this.stopStrategy(strategyId, executionContext.userId);
+      }
+
+      // Close services
+      if (this.pluginManager) {
+        await this.pluginManager.close();
+      }
+      if (this.marketDataProvider) {
+        await this.marketDataProvider.close();
+      }
+      if (this.riskManager) {
+        await this.riskManager.close();
+      }
+
+      logger.info('Strategy Engine closed successfully');
     } catch (error) {
-      logger.error('Error deleting strategy:', error);
-      throw error;
+      logger.error('Error closing Strategy Engine:', error);
     }
   }
 }

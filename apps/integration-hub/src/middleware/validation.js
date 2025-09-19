@@ -1,255 +1,201 @@
 const Joi = require('joi');
-const { logger } = require('./logger');
+const logger = require('../utils/logger');
 
-// Validation schemas
-const schemas = {
-  webhookCreation: Joi.object({
-    name: Joi.string().required().min(1).max(255),
-    url: Joi.string().uri().required(),
-    events: Joi.array().items(Joi.string()).min(1).required(),
-    secret: Joi.string().optional().min(1).max(255),
-    headers: Joi.object().optional()
-  }),
+const validateRequest = (schema) => {
+  return (req, res, next) => {
+    const { error } = schema.validate(req.body);
+    if (error) {
+      logger.error('Validation error:', error.details[0].message);
+      return res.status(400).json({ 
+        error: 'Validation error', 
+        details: error.details[0].message 
+      });
+    }
+    next();
+  };
+};
 
-  integrationCreation: Joi.object({
-    name: Joi.string().required().min(1).max(255),
-    type: Joi.string().valid('api', 'webhook', 'database', 'file').required(),
-    configuration: Joi.object().required(),
-    partners: Joi.array().items(Joi.string()).optional()
-  }),
+const validateQuery = (schema) => {
+  return (req, res, next) => {
+    const { error } = schema.validate(req.query);
+    if (error) {
+      logger.error('Query validation error:', error.details[0].message);
+      return res.status(400).json({ 
+        error: 'Query validation error', 
+        details: error.details[0].message 
+      });
+    }
+    next();
+  };
+};
 
-  integrationExecution: Joi.object({
-    parameters: Joi.object().optional(),
-    data: Joi.object().optional()
-  }),
+const validateParams = (schema) => {
+  return (req, res, next) => {
+    const { error } = schema.validate(req.params);
+    if (error) {
+      logger.error('Params validation error:', error.details[0].message);
+      return res.status(400).json({ 
+        error: 'Params validation error', 
+        details: error.details[0].message 
+      });
+    }
+    next();
+  };
+};
 
-  dataTransformation: Joi.object({
-    data: Joi.any().required(),
-    transformationType: Joi.string().required(),
-    parameters: Joi.object().optional()
-  }),
+// Integration validation schemas
+const createIntegrationSchema = Joi.object({
+  name: Joi.string().required().min(1).max(255),
+  type: Joi.string().required().valid('market_data', 'trading', 'banking', 'compliance'),
+  provider: Joi.string().required().min(1).max(100),
+  configuration: Joi.object().required(),
+  endpoints: Joi.array().items(Joi.object({
+    name: Joi.string().required(),
+    url: Joi.string().required().uri(),
+    method: Joi.string().valid('GET', 'POST', 'PUT', 'DELETE').required()
+  })).required(),
+  authentication: Joi.object({
+    type: Joi.string().valid('api_key', 'bearer_token', 'basic_auth', 'oauth2').required(),
+    header: Joi.string().optional(),
+    key: Joi.string().optional(),
+    token: Joi.string().optional(),
+    username: Joi.string().optional(),
+    password: Joi.string().optional(),
+    access_token: Joi.string().optional()
+  }).required()
+});
 
-  rateLimitCreation: Joi.object({
-    partnerId: Joi.string().required(),
-    endpoint: Joi.string().required(),
-    limits: Joi.object({
-      requests: Joi.number().integer().min(1).required(),
-      window: Joi.number().integer().min(1).required()
-    }).required(),
-    window: Joi.string().valid('second', 'minute', 'hour', 'day').required()
-  }),
+const updateIntegrationSchema = Joi.object({
+  name: Joi.string().optional().min(1).max(255),
+  type: Joi.string().optional().valid('market_data', 'trading', 'banking', 'compliance'),
+  provider: Joi.string().optional().min(1).max(100),
+  configuration: Joi.object().optional(),
+  endpoints: Joi.array().items(Joi.object({
+    name: Joi.string().required(),
+    url: Joi.string().required().uri(),
+    method: Joi.string().valid('GET', 'POST', 'PUT', 'DELETE').required()
+  })).optional(),
+  authentication: Joi.object({
+    type: Joi.string().valid('api_key', 'bearer_token', 'basic_auth', 'oauth2').required(),
+    header: Joi.string().optional(),
+    key: Joi.string().optional(),
+    token: Joi.string().optional(),
+    username: Joi.string().optional(),
+    password: Joi.string().optional(),
+    access_token: Joi.string().optional()
+  }).optional()
+});
 
-  partnerCreation: Joi.object({
-    name: Joi.string().required().min(1).max(255),
-    type: Joi.string().valid('api', 'webhook', 'database', 'file').required(),
-    configuration: Joi.object().required(),
-    credentials: Joi.object().optional()
-  }),
+const getIntegrationsSchema = Joi.object({
+  type: Joi.string().optional().valid('market_data', 'trading', 'banking', 'compliance'),
+  status: Joi.string().optional().valid('active', 'inactive', 'error'),
+  page: Joi.number().integer().min(1).optional(),
+  limit: Joi.number().integer().min(1).max(100).optional()
+});
 
-  alertCreation: Joi.object({
-    name: Joi.string().required().min(1).max(255),
-    description: Joi.string().optional().max(1000),
-    integrationId: Joi.string().required(),
-    severity: Joi.string().valid('low', 'medium', 'high', 'critical').required(),
-    conditions: Joi.array().items(Joi.object({
-      type: Joi.string().required(),
+const integrationIdSchema = Joi.object({
+  id: Joi.string().required().uuid()
+});
+
+// Data transformation validation schemas
+const transformDataSchema = Joi.object({
+  sourceData: Joi.alternatives().try(
+    Joi.object(),
+    Joi.array().items(Joi.object())
+  ).required(),
+  transformationRules: Joi.object({
+    fieldMappings: Joi.object().optional(),
+    validations: Joi.array().items(Joi.object({
       field: Joi.string().required(),
-      operator: Joi.string().required(),
+      type: Joi.string().valid('string', 'number', 'email', 'date', 'boolean').required(),
+      required: Joi.boolean().optional(),
+      min: Joi.number().optional(),
+      max: Joi.number().optional(),
+      pattern: Joi.string().optional()
+    })).optional(),
+    filters: Joi.array().items(Joi.object({
+      field: Joi.string().required(),
+      operator: Joi.string().valid('equals', 'not_equals', 'greater_than', 'less_than', 'greater_than_or_equal', 'less_than_or_equal', 'contains', 'not_contains', 'starts_with', 'ends_with', 'in', 'not_in').required(),
       value: Joi.any().required()
-    })).min(1).required(),
-    config: Joi.object().optional()
-  }),
+    })).optional(),
+    aggregations: Joi.array().items(Joi.object({
+      field: Joi.string().required(),
+      operation: Joi.string().valid('sum', 'avg', 'min', 'max', 'count', 'distinct_count').required(),
+      groupBy: Joi.string().optional()
+    })).optional()
+  }).required(),
+  targetFormat: Joi.string().valid('json', 'csv', 'xml', 'yaml').required()
+});
 
-  healthCheckCreation: Joi.object({
-    name: Joi.string().required().min(1).max(255),
-    integrationId: Joi.string().required(),
-    type: Joi.string().valid('api', 'webhook', 'database', 'file').required(),
-    config: Joi.object().required(),
-    interval: Joi.number().integer().min(1).max(3600).required(),
-    timeout: Joi.number().integer().min(1).max(300).optional()
-  })
-};
+// Data sync validation schemas
+const syncDataSchema = Joi.object({
+  integrationId: Joi.string().required().uuid(),
+  dataType: Joi.string().required().min(1).max(100),
+  startDate: Joi.date().optional(),
+  endDate: Joi.date().optional()
+});
 
-const validateRequest = (schemaName) => {
-  return (req, res, next) => {
-    const schema = schemas[schemaName];
-    
-    if (!schema) {
-      logger.error(`Validation schema not found: ${schemaName}`);
-      return res.status(500).json({
-        success: false,
-        error: 'Validation schema not found'
-      });
-    }
+// API route validation schemas
+const createRouteSchema = Joi.object({
+  path: Joi.string().required().min(1).max(255),
+  method: Joi.string().valid('GET', 'POST', 'PUT', 'DELETE', 'PATCH').required(),
+  target: Joi.string().required().uri(),
+  service: Joi.string().required().min(1).max(100),
+  loadBalancer: Joi.string().optional(),
+  circuitBreaker: Joi.string().optional(),
+  rateLimit: Joi.number().integer().min(1).optional(),
+  authentication: Joi.boolean().optional(),
+  authorization: Joi.string().optional(),
+  middleware: Joi.array().items(Joi.string()).optional()
+});
 
-    const { error, value } = schema.validate(req.body, {
-      abortEarly: false,
-      stripUnknown: true
-    });
+const updateRouteSchema = Joi.object({
+  path: Joi.string().optional().min(1).max(255),
+  method: Joi.string().optional().valid('GET', 'POST', 'PUT', 'DELETE', 'PATCH'),
+  target: Joi.string().optional().uri(),
+  service: Joi.string().optional().min(1).max(100),
+  loadBalancer: Joi.string().optional(),
+  circuitBreaker: Joi.string().optional(),
+  rateLimit: Joi.number().integer().min(1).optional(),
+  authentication: Joi.boolean().optional(),
+  authorization: Joi.string().optional(),
+  middleware: Joi.array().items(Joi.string()).optional()
+});
 
-    if (error) {
-      const errorDetails = error.details.map(detail => ({
-        field: detail.path.join('.'),
-        message: detail.message
-      }));
+const getRoutesSchema = Joi.object({
+  service: Joi.string().optional().min(1).max(100),
+  method: Joi.string().optional().valid('GET', 'POST', 'PUT', 'DELETE', 'PATCH'),
+  page: Joi.number().integer().min(1).optional(),
+  limit: Joi.number().integer().min(1).max(100).optional()
+});
 
-      logger.warn('Validation error:', {
-        schema: schemaName,
-        errors: errorDetails,
-        body: req.body
-      });
-
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        details: errorDetails
-      });
-    }
-
-    // Replace req.body with validated and sanitized data
-    req.body = value;
-    next();
-  };
-};
-
-const validateQuery = (schemaName) => {
-  return (req, res, next) => {
-    const schema = schemas[schemaName];
-    
-    if (!schema) {
-      logger.error(`Validation schema not found: ${schemaName}`);
-      return res.status(500).json({
-        success: false,
-        error: 'Validation schema not found'
-      });
-    }
-
-    const { error, value } = schema.validate(req.query, {
-      abortEarly: false,
-      stripUnknown: true
-    });
-
-    if (error) {
-      const errorDetails = error.details.map(detail => ({
-        field: detail.path.join('.'),
-        message: detail.message
-      });
-
-      logger.warn('Query validation error:', {
-        schema: schemaName,
-        errors: errorDetails,
-        query: req.query
-      });
-
-      return res.status(400).json({
-        success: false,
-        error: 'Query validation failed',
-        details: errorDetails
-      });
-    }
-
-    // Replace req.query with validated and sanitized data
-    req.query = value;
-    next();
-  };
-};
-
-const validateParams = (schemaName) => {
-  return (req, res, next) => {
-    const schema = schemas[schemaName];
-    
-    if (!schema) {
-      logger.error(`Validation schema not found: ${schemaName}`);
-      return res.status(500).json({
-        success: false,
-        error: 'Validation schema not found'
-      });
-    }
-
-    const { error, value } = schema.validate(req.params, {
-      abortEarly: false,
-      stripUnknown: true
-    });
-
-    if (error) {
-      const errorDetails = error.details.map(detail => ({
-        field: detail.path.join('.'),
-        message: detail.message
-      });
-
-      logger.warn('Params validation error:', {
-        schema: schemaName,
-        errors: errorDetails,
-        params: req.params
-      });
-
-      return res.status(400).json({
-        success: false,
-        error: 'Params validation failed',
-        details: errorDetails
-      });
-    }
-
-    // Replace req.params with validated and sanitized data
-    req.params = value;
-    next();
-  };
-};
-
-// Custom validation functions
-const validateWebhookUrl = (url) => {
-  try {
-    const parsedUrl = new URL(url);
-    return ['http:', 'https:'].includes(parsedUrl.protocol);
-  } catch (error) {
-    return false;
-  }
-};
-
-const validateApiConfiguration = (config) => {
-  const requiredFields = ['baseUrl'];
-  return requiredFields.every(field => config.hasOwnProperty(field));
-};
-
-const validateWebhookConfiguration = (config) => {
-  const requiredFields = ['webhookUrl'];
-  return requiredFields.every(field => config.hasOwnProperty(field));
-};
-
-const validateDatabaseConfiguration = (config) => {
-  const requiredFields = ['connectionString'];
-  return requiredFields.every(field => config.hasOwnProperty(field));
-};
-
-const validateFileConfiguration = (config) => {
-  const requiredFields = ['filePath'];
-  return requiredFields.every(field => config.hasOwnProperty(field));
-};
-
-const validateIntegrationConfiguration = (type, config) => {
-  switch (type) {
-    case 'api':
-      return validateApiConfiguration(config);
-    case 'webhook':
-      return validateWebhookConfiguration(config);
-    case 'database':
-      return validateDatabaseConfiguration(config);
-    case 'file':
-      return validateFileConfiguration(config);
-    default:
-      return false;
-  }
-};
+const routeIdSchema = Joi.object({
+  id: Joi.string().required().uuid()
+});
 
 module.exports = {
   validateRequest,
   validateQuery,
   validateParams,
-  validateWebhookUrl,
-  validateApiConfiguration,
-  validateWebhookConfiguration,
-  validateDatabaseConfiguration,
-  validateFileConfiguration,
-  validateIntegrationConfiguration,
-  schemas
+  
+  // Integration validators
+  createIntegration: validateRequest(createIntegrationSchema),
+  updateIntegration: validateRequest(updateIntegrationSchema),
+  getIntegrations: validateQuery(getIntegrationsSchema),
+  getIntegration: validateParams(integrationIdSchema),
+  deleteIntegration: validateParams(integrationIdSchema),
+  testIntegration: validateParams(integrationIdSchema),
+  
+  // Data transformation validators
+  transformData: validateRequest(transformDataSchema),
+  
+  // Data sync validators
+  syncData: validateRequest(syncDataSchema),
+  
+  // API route validators
+  createRoute: validateRequest(createRouteSchema),
+  updateRoute: validateRequest(updateRouteSchema),
+  getRoutes: validateQuery(getRoutesSchema),
+  getRoute: validateParams(routeIdSchema),
+  deleteRoute: validateParams(routeIdSchema)
 };

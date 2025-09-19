@@ -1,165 +1,98 @@
-const Redis = require('ioredis');
-const { logger } = require('../utils/logger');
+const redis = require('redis');
+const logger = require('../utils/logger');
 
-class RedisService {
-  constructor() {
-    this.client = null;
-    this.subscriber = null;
-    this.publisher = null;
-  }
-
-  async initialize() {
-    try {
-      // Main Redis client
-      this.client = new Redis({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: process.env.REDIS_PORT || 6379,
-        password: process.env.REDIS_PASSWORD,
-        retryDelayOnFailover: 100,
-        maxRetriesPerRequest: 3,
-        lazyConnect: true
-      });
-
-      // Subscriber client
-      this.subscriber = new Redis({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: process.env.REDIS_PORT || 6379,
-        password: process.env.REDIS_PASSWORD,
-        retryDelayOnFailover: 100,
-        maxRetriesPerRequest: 3,
-        lazyConnect: true
-      });
-
-      // Publisher client
-      this.publisher = new Redis({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: process.env.REDIS_PORT || 6379,
-        password: process.env.REDIS_PASSWORD,
-        retryDelayOnFailover: 100,
-        maxRetriesPerRequest: 3,
-        lazyConnect: true
-      });
-
-      // Connect to Redis
-      await this.client.connect();
-      await this.subscriber.connect();
-      await this.publisher.connect();
-
-      // Test connection
-      await this.client.ping();
-
-      logger.info('Redis service initialized successfully');
-    } catch (error) {
-      logger.error('Failed to initialize Redis service:', error);
-      throw error;
+const client = redis.createClient({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: process.env.REDIS_PORT || 6379,
+  password: process.env.REDIS_PASSWORD || null,
+  retry_strategy: (options) => {
+    if (options.error && options.error.code === 'ECONNREFUSED') {
+      logger.error('Redis server connection refused');
+      return new Error('Redis server connection refused');
     }
-  }
-
-  async close() {
-    try {
-      if (this.client) {
-        await this.client.quit();
-      }
-      if (this.subscriber) {
-        await this.subscriber.quit();
-      }
-      if (this.publisher) {
-        await this.publisher.quit();
-      }
-      logger.info('Redis service closed');
-    } catch (error) {
-      logger.error('Error closing Redis service:', error);
+    if (options.total_retry_time > 1000 * 60 * 60) {
+      logger.error('Redis retry time exhausted');
+      return new Error('Retry time exhausted');
     }
-  }
-
-  async get(key) {
-    try {
-      const value = await this.client.get(key);
-      return value ? JSON.parse(value) : null;
-    } catch (error) {
-      logger.error(`Error getting key ${key}:`, error);
-      throw error;
+    if (options.attempt > 10) {
+      logger.error('Redis max retry attempts reached');
+      return undefined;
     }
+    return Math.min(options.attempt * 100, 3000);
   }
+});
 
-  async set(key, value, ttl = null) {
-    try {
-      const serializedValue = JSON.stringify(value);
-      if (ttl) {
-        await this.client.setex(key, ttl, serializedValue);
-      } else {
-        await this.client.set(key, serializedValue);
-      }
-    } catch (error) {
-      logger.error(`Error setting key ${key}:`, error);
-      throw error;
+client.on('connect', () => {
+  logger.info('Connected to Redis');
+});
+
+client.on('error', (err) => {
+  logger.error('Redis error:', err);
+});
+
+client.on('ready', () => {
+  logger.info('Redis client ready');
+});
+
+const get = async (key) => {
+  try {
+    const value = await client.get(key);
+    return value ? JSON.parse(value) : null;
+  } catch (error) {
+    logger.error('Redis get error:', error);
+    return null;
+  }
+};
+
+const set = async (key, value, expireInSeconds = null) => {
+  try {
+    const stringValue = JSON.stringify(value);
+    if (expireInSeconds) {
+      await client.setex(key, expireInSeconds, stringValue);
+    } else {
+      await client.set(key, stringValue);
     }
+    return true;
+  } catch (error) {
+    logger.error('Redis set error:', error);
+    return false;
   }
+};
 
-  async del(key) {
-    try {
-      await this.client.del(key);
-    } catch (error) {
-      logger.error(`Error deleting key ${key}:`, error);
-      throw error;
-    }
+const del = async (key) => {
+  try {
+    await client.del(key);
+    return true;
+  } catch (error) {
+    logger.error('Redis delete error:', error);
+    return false;
   }
+};
 
-  async exists(key) {
-    try {
-      const result = await this.client.exists(key);
-      return result === 1;
-    } catch (error) {
-      logger.error(`Error checking existence of key ${key}:`, error);
-      throw error;
-    }
+const exists = async (key) => {
+  try {
+    const result = await client.exists(key);
+    return result === 1;
+  } catch (error) {
+    logger.error('Redis exists error:', error);
+    return false;
   }
+};
 
-  async expire(key, ttl) {
-    try {
-      await this.client.expire(key, ttl);
-    } catch (error) {
-      logger.error(`Error setting expiration for key ${key}:`, error);
-      throw error;
-    }
+const close = async () => {
+  try {
+    await client.quit();
+    logger.info('Redis connection closed');
+  } catch (error) {
+    logger.error('Error closing Redis connection:', error);
   }
+};
 
-  async publish(channel, message) {
-    try {
-      await this.publisher.publish(channel, JSON.stringify(message));
-    } catch (error) {
-      logger.error(`Error publishing to channel ${channel}:`, error);
-      throw error;
-    }
-  }
-
-  async subscribe(channel, callback) {
-    try {
-      await this.subscriber.subscribe(channel);
-      this.subscriber.on('message', (receivedChannel, message) => {
-        if (receivedChannel === channel) {
-          try {
-            const parsedMessage = JSON.parse(message);
-            callback(parsedMessage);
-          } catch (error) {
-            logger.error(`Error parsing message from channel ${channel}:`, error);
-          }
-        }
-      });
-    } catch (error) {
-      logger.error(`Error subscribing to channel ${channel}:`, error);
-      throw error;
-    }
-  }
-
-  async unsubscribe(channel) {
-    try {
-      await this.subscriber.unsubscribe(channel);
-    } catch (error) {
-      logger.error(`Error unsubscribing from channel ${channel}:`, error);
-      throw error;
-    }
-  }
-}
-
-module.exports = new RedisService();
+module.exports = {
+  client,
+  get,
+  set,
+  del,
+  exists,
+  close
+};
